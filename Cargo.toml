@@ -1,0 +1,32 @@
+# Rust port of https://github.com/warith-harchaoui/audio-helper (Python).
+# Scope v0.1: file-level audio utilities on top of the system `ffmpeg`/`ffprobe`
+# binaries — probe, convert, load-to-PCM, chunk, silence, concat, room tone, split.
+# Demucs source separation (`separate_sources`) and MFCC similarity
+# (`sound_resemblance`) are NOT ported: both need a real ML/DSP stack (torch, or a
+# hand-rolled MFCC implementation) disproportionate to this crate's promise — same
+# "don't reimplement the heavy part" call as `youtube-helper-rs` skipping yt-dlp
+# itself. See README "Not ported".
+[package]
+name = "audio-helper-rs"
+version = "0.1.0"
+edition = "2021"
+description = "File-level audio utilities on top of ffmpeg: probe, convert, load to PCM, chunk, silence, concatenate, room tone, split. Rust port of audio-helper."
+license = "BSD-3-Clause"
+repository = "https://github.com/warith-harchaoui/audio-helper-rs"
+readme = "README.md"
+authors = ["Warith HARCHAOUI"]
+keywords = ["audio", "ffmpeg", "pcm", "wav", "resampling"]
+categories = ["multimedia::audio"]
+
+[dependencies]
+thiserror = "2"
+# Parses ffprobe's `-of json` output (stream/format metadata) without hand-rolling
+# a JSON reader.
+serde_json = "1"
+# WAV read/write for the parts that don't need ffmpeg at all (silence generation
+# writes zeros directly; PCM loading reads ffmpeg's own WAV output) — same crate
+# and reasoning as the sibling `scribe-reunion`/`podcast-helper-rs` crates.
+hound = "3"
+# Only needed by `silence::generate_silence` for a non-WAV output (write zeros to a
+# temp WAV, then convert::convert to the requested container).
+tempfile = "3"

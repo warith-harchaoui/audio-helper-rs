@@ -1,8 +1,8 @@
 # Audio Helper (Rust)
 
-[🇫🇷](https://github.com/warith-harchaoui/audio-helper-rs/blob/main/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/audio-helper-rs/blob/main/README.md)
+[🇫🇷](https://github.com/warith-harchaoui/audio-helper-rs/blob/master/LISEZMOI.md) · [🇬🇧](https://github.com/warith-harchaoui/audio-helper-rs/blob/master/README.md)
 
-[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
+[![crates.io](https://img.shields.io/crates/v/audio-helper-rs.svg)](https://crates.io/crates/audio-helper-rs) [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](./LICENSE)
 
 Réécriture en Rust de [`audio-helper`](https://github.com/warith-harchaoui/audio-helper). Même promesse, des utilitaires audio au niveau fichier au-dessus de `ffmpeg`/`ffprobe` — pas un portage ligne à ligne du code Python, du Rust idiomatique de bout en bout.
 
@@ -40,7 +40,7 @@ Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`).
 
 ```toml
 [dependencies]
-audio-helper-rs = { git = "https://github.com/warith-harchaoui/audio-helper-rs" }
+audio-helper-rs = "0.1"
 ```
 
 ## État du projet

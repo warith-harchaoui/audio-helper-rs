@@ -8,7 +8,7 @@
 # itself. See README "Not ported".
 [package]
 name = "audio-helper-rs"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "File-level audio utilities on top of ffmpeg: probe, convert, load to PCM, chunk, silence, concatenate, room tone, split. Rust port of audio-helper."
 license = "BSD-3-Clause"

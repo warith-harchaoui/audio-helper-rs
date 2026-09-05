@@ -73,6 +73,22 @@ audio-helper-rs = "0.1"
   cargo llvm-cov --html                # rapport HTML dans target/llvm-cov/html/index.html
   ```
 
+## Vérifications avant de pousser
+
+```bash
+scripts/install-hooks.sh   # une fois par clone : installe le garde-fou pre-push ci-dessous
+cargo fmt --all --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all
+scripts/check-fresh-resolve.sh   # compile sans Cargo.lock, comme un consommateur en aval
+```
+
+Le dernier existe parce que les trois autres, et la CI, compilent tous contre le
+`Cargo.lock` commité — que personne n'utilise en aval du crate publié. Un intervalle de
+dépendance devenu mauvais reste vert ici tout en cassant chaque `cargo add` / `cargo
+install` neuf, et `cargo publish --dry-run` ne le voit pas non plus (il vérifie avec le
+même lock). La CI lance ce contrôle une fois, sous Linux.
+
 ## Projets liés
 
 Fait partie du même socle d'outils locaux que [`audio-helper`](https://github.com/warith-harchaoui/audio-helper) (Python), [`podcast-helper-rs`](https://github.com/warith-harchaoui/podcast-helper-rs), [`capture-helper-rs`](https://github.com/warith-harchaoui/capture-helper-rs), [`youtube-helper-rs`](https://github.com/warith-harchaoui/youtube-helper-rs), et la suite [AI Helpers](https://github.com/warith-harchaoui/ai-helpers). Réécriture indépendante, pas une liaison (*binding*).

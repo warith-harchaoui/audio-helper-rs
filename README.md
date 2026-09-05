@@ -73,6 +73,22 @@ audio-helper-rs = "0.1"
   cargo llvm-cov --html                # HTML report at target/llvm-cov/html/index.html
   ```
 
+## Checks before pushing
+
+```bash
+scripts/install-hooks.sh   # once per clone: installs the pre-push gate below
+cargo fmt --all --check
+cargo clippy --all-targets -- -D warnings
+cargo test --all
+scripts/check-fresh-resolve.sh   # builds with no Cargo.lock, like a downstream consumer
+```
+
+The last one exists because the other three, and CI, all build against the committed
+`Cargo.lock` — which no consumer of the published crate ever sees. A dependency range that
+has gone bad stays green here while breaking every fresh `cargo add` / `cargo install`, and
+`cargo publish --dry-run` doesn't catch it either (it verifies with the same lock). CI runs
+this check once, on Linux.
+
 ## Related
 
 Part of the same author's local-first tooling as [`audio-helper`](https://github.com/warith-harchaoui/audio-helper) (Python), [`podcast-helper-rs`](https://github.com/warith-harchaoui/podcast-helper-rs), [`capture-helper-rs`](https://github.com/warith-harchaoui/capture-helper-rs), [`youtube-helper-rs`](https://github.com/warith-harchaoui/youtube-helper-rs), and the [AI Helpers](https://github.com/warith-harchaoui/ai-helpers) suite. Independent rewrite, not a binding.

@@ -13,9 +13,14 @@
 //! std::fs::remove_file(&path).ok();
 //! ```
 
+// Every public item carries a doc comment. Warned here, denied by CI's
+// `-D warnings`, so a published API never reaches docs.rs undocumented.
+#![warn(missing_docs)]
+
 pub mod chunk;
 pub mod concat;
 pub mod convert;
+/// Error type and `Result` alias shared by every operation in this crate.
 pub mod error;
 pub mod pcm;
 pub mod probe;

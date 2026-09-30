@@ -10,11 +10,13 @@ use std::path::Path;
 const VALID_COLORS: [&str; 7] = ["white", "pink", "brown", "red", "blue", "violet", "velvet"];
 
 #[derive(Debug, Clone)]
+/// How to synthesise room tone: level, noise colour, and sample rate.
 pub struct RoomToneOptions {
     /// Noise level in dB (typical range -45..-38). Amplitude is `10 ** (db / 20)`.
     pub noise_db: f64,
     /// ffmpeg `anoisesrc` color: white/pink/brown/red/blue/violet/velvet.
     pub color: String,
+    /// Sample rate of the generated file, in hertz.
     pub sample_rate: u32,
 }
 

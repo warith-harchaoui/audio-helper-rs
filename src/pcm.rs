@@ -8,6 +8,8 @@ use crate::probe::native_format;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
+/// How to decode a file into memory: resampling, and how many channels to
+/// come back with.
 pub struct LoadOptions {
     /// Resample to this rate; `None` keeps the file's native sample rate.
     pub target_sample_rate: Option<u32>,
@@ -29,9 +31,14 @@ impl Default for LoadOptions {
 }
 
 #[derive(Debug, Clone)]
+/// Decoded audio held in memory, interleaved when there is more than one
+/// channel.
 pub struct PcmBuffer {
+    /// The samples, interleaved across channels, in `-1.0..=1.0`.
     pub samples: Vec<f32>,
+    /// Sample rate of these samples, in hertz.
     pub sample_rate: u32,
+    /// How many channels the samples are interleaved across.
     pub channels: u32,
 }
 

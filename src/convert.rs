@@ -6,8 +6,12 @@ use crate::probe::is_valid_audio_file;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
+/// How to re-encode a file: target rate, channel count, and the PCM codec to
+/// use when the output container is WAV.
 pub struct ConvertOptions {
+    /// Target sample rate, in hertz.
     pub sample_rate: u32,
+    /// Target channel count: 1 for mono, 2 for stereo.
     pub channels: u32,
     /// PCM codec applied when the *output* container is WAV (e.g. `"pcm_s16le"`,
     /// `"pcm_f32le"`). Ignored for compressed containers (mp3, ...), where ffmpeg's

@@ -6,7 +6,7 @@
 
 Réécriture en Rust de [`audio-helper`](https://github.com/warith-harchaoui/audio-helper). Même promesse, des utilitaires audio au niveau fichier au-dessus de `ffmpeg`/`ffprobe` — pas un portage ligne à ligne du code Python, du Rust idiomatique de bout en bout.
 
-## Périmètre v0.1
+## Périmètre
 
 | Fonction | Ce qu'elle fait |
 |---|---|
@@ -14,6 +14,7 @@ Réécriture en Rust de [`audio-helper`](https://github.com/warith-harchaoui/aud
 | `get_audio_duration(path) -> Result<f64>` | Durée en secondes, via `ffprobe`. |
 | `convert(input, output, &ConvertOptions) -> Result<()>` | Réencode à une fréquence d'échantillonnage / un nombre de canaux / un codec donnés. `overwrite: false` saute le travail si une sortie valide existe déjà. |
 | `load(path, &LoadOptions) -> Result<PcmBuffer>` | Décode en mémoire en PCM `f32` (`Vec<f32>` + fréquence + canaux) — mono par défaut, rééchantillonnage optionnel. Fonctionne sur toute entrée lisible par `ffmpeg`, y compris la piste audio d'un conteneur vidéo. |
+| `save(&PcmBuffer, path) -> Result<()>` | Réécrit du PCM dans un fichier, l'inverse de `load`. Un `.wav` est écrit directement (sans `ffmpeg`) ; toute autre extension passe par `convert`, donc le codec suit l'extension. Les échantillons hors de `-1.0..=1.0` sont écrêtés, pas repliés. |
 | `extract_chunk(input, start, end, output) -> Result<()>` | Extrait une tranche `[start, end)` (secondes). |
 | `generate_silence(duration, output, sample_rate) -> Result<()>` | Écrit un fichier silencieux d'une durée donnée ; vérifie ensuite que le résultat est réellement silencieux. |
 | `concatenate(inputs, output) -> Result<()>` | Concatène des fichiers bout à bout via le filtre `concat` de `ffmpeg` (fonctionne même avec des codecs différents, contrairement au démuxeur `concat`). |
@@ -32,35 +33,35 @@ println!("{} secondes", get_audio_duration(&path)?);
 
 - **`separate_sources`** (séparation de sources Demucs) : nécessite une vraie pile ML (`torch`/`torchaudio`), disproportionnée par rapport à la promesse de ce crate. Même choix que `youtube-helper-rs` qui ne réimplémente pas `yt-dlp` lui-même : une v0.1 qui délègue à un processus Python/Demucs, plutôt qu'une réimplémentation Rust native, serait l'étape naturelle suivante si le besoin se confirme.
 - **`sound_resemblance`** (score de similarité par MFCC) : du DSP spécialisé (bancs de filtres mel, MFCC) qui mérite son propre crate plutôt que d'être greffé sur des utilitaires de niveau fichier.
-- **Aller-retour `load`/`save` via `torch.Tensor`/`np.ndarray`** : ce crate renvoie un simple `Vec<f32>`, sans dépendance à une bibliothèque de tenseurs pour un crate bibliothèque. Réécrire un `Vec<f32>` dans un fichier revient à passer par `convert` sur un WAV écrit via [`hound`](https://crates.io/crates/hound), déjà une dépendance directe.
+- **Aller-retour `load`/`save` via `torch.Tensor`/`np.ndarray`** : ce crate renvoie un simple `Vec<f32>`, sans dépendance à une bibliothèque de tenseurs pour un crate bibliothèque. L'aller-retour lui-même existe : `save` est l'inverse de `load` (ajouté en 0.2.0).
 
 ## Installation
 
-Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`).
+Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`) ainsi que Rust 1.88 ou plus récent.
 
 ```toml
 [dependencies]
-audio-helper-rs = "0.1"
+audio-helper-rs = "0.2"
 ```
 
 ## État du projet
 
 - `cargo build` : OK, aucun avertissement.
-- `cargo test` : **20 tests unitaires + 1 doctest passés**, 0 échec — chaque test lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé.
+- `cargo test` : **26 tests unitaires + 1 doctest passés**, 0 échec — chaque test qui en a besoin lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé. Sans `ffmpeg` installé, ces tests sont sautés avec un message explicite au lieu d'échouer ; en CI (`$CI` défini) ils échouent bruyamment, car là un `ffmpeg` absent signifie que le workflow est cassé.
 - `cargo clippy --all-targets` : OK, aucun avertissement.
-- **Couverture de code mesurée** (`cargo llvm-cov`) : **88,76 % de lignes couvertes** (623 lignes, 70 non couvertes), 83,08 % de fonctions, 89,90 % de régions. Détail par fichier :
+- **Couverture de code mesurée** (`cargo llvm-cov`, remesurée le 2026-10-02 pour la 0.2.0) : **91,19 % de lignes couvertes** (795 lignes, 70 non couvertes), 87,06 % de fonctions, 91,41 % de régions. Détail par fichier :
 
   | Fichier | Lignes couvertes |
   |---|---|
-  | `chunk.rs` | 89,47 % |
-  | `concat.rs` | 86,54 % |
-  | `convert.rs` | 93,98 % |
-  | `ffmpeg.rs` | 81,48 % (la branche `MissingBinary` demande que `ffmpeg` soit réellement absent du `PATH`, non reproduit sur une machine de CI normale) |
-  | `pcm.rs` | 90,91 % |
-  | `probe.rs` | 82,88 % (cas limites du JSON `ffprobe`, un flux sans `duration` du tout, difficiles à fixturer sans fichier corrompu) |
-  | `roomtone.rs` | 90,77 % |
-  | `silence.rs` | 87,80 % |
-  | `split.rs` | 94,83 % |
+  | `chunk.rs` | 90,00 % |
+  | `concat.rs` | 86,79 % |
+  | `convert.rs` | 94,12 % |
+  | `ffmpeg.rs` | 82,14 % (la branche `MissingBinary` demande que `ffmpeg` soit réellement absent du `PATH`, soit précisément le cas que la suite de tests saute désormais au lieu d'échouer) |
+  | `pcm.rs` | 97,85 % |
+  | `probe.rs` | 83,04 % (cas limites du JSON `ffprobe`, un flux sans `duration` du tout, difficiles à fixturer sans fichier corrompu) |
+  | `roomtone.rs` | 91,04 % |
+  | `silence.rs` | 88,10 % |
+  | `split.rs` | 95,00 % |
 
   Pour relancer la mesure :
 

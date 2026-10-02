@@ -62,6 +62,23 @@ pub enum AudioHelperError {
     #[error("at least one audio file is required")]
     EmptyInputList,
 
+    /// The buffer handed to [`crate::pcm::save`] cannot be interpreted as
+    /// interleaved audio: zero channels, zero sample rate, more channels than a
+    /// WAV header can express, or a sample count that is not a whole number of
+    /// frames. Rejected rather than written, because every one of those produces
+    /// a file that plays as noise instead of failing.
+    #[error(
+        "invalid PCM layout: {samples} samples across {channels} channel(s) at {sample_rate} Hz"
+    )]
+    InvalidPcmLayout {
+        /// How many samples the buffer holds.
+        samples: usize,
+        /// How many channels it claims they are interleaved across.
+        channels: u32,
+        /// The sample rate it claims.
+        sample_rate: u32,
+    },
+
     #[error(
         "unsupported noise color: {0:?} (expected one of white/pink/brown/red/blue/violet/velvet)"
     )]

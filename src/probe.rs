@@ -106,10 +106,11 @@ pub(crate) fn native_format(path: &Path) -> Result<(u32, u32)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn valid_wav_reports_duration_and_is_valid() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("tone.wav");
         write_test_wav(&path, 16_000, 1.0);

@@ -81,10 +81,11 @@ pub fn convert(input: &Path, output: &Path, options: &ConvertOptions) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn converts_sample_rate_and_channels() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 44_100, 1.0);
@@ -104,6 +105,7 @@ mod tests {
 
     #[test]
     fn skips_conversion_when_overwrite_is_false_and_output_already_valid() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 44_100, 1.0);

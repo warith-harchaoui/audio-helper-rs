@@ -61,10 +61,11 @@ pub fn split_regularly(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn splits_into_regular_chunks() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 16_000, 3.5);
@@ -81,6 +82,7 @@ mod tests {
 
     #[test]
     fn a_file_shorter_than_one_second_still_yields_one_chunk() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("short.wav");
         write_test_wav(&input, 16_000, 0.3);

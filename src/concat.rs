@@ -51,10 +51,11 @@ pub fn concat(inputs: &[impl AsRef<Path>], output: &Path) -> Result<()> {
 mod tests {
     use super::*;
     use crate::probe::get_audio_duration;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn concatenates_two_files_and_sums_duration() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let a = dir.path().join("a.wav");
         let b = dir.path().join("b.wav");

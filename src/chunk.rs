@@ -47,10 +47,11 @@ pub fn extract_chunk(input: &Path, start: f64, end: f64, output: &Path) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn extracts_a_valid_range() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 16_000, 2.0);
@@ -64,6 +65,7 @@ mod tests {
 
     #[test]
     fn rejects_out_of_range_end() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 16_000, 1.0);
@@ -75,6 +77,7 @@ mod tests {
 
     #[test]
     fn rejects_end_before_start() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("in.wav");
         write_test_wav(&input, 16_000, 1.0);

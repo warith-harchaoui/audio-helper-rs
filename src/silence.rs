@@ -82,9 +82,11 @@ fn write_silent_wav(path: &Path, sample_rate: u32, duration: f64) -> Result<()> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::testutil::require_ffmpeg;
 
     #[test]
     fn generates_a_wav_of_the_requested_duration() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let output = dir.path().join("silence.wav");
 
@@ -96,6 +98,7 @@ mod tests {
 
     #[test]
     fn generates_a_non_wav_container() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let output = dir.path().join("silence.mp3");
 

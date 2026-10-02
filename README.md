@@ -6,7 +6,7 @@
 
 Rust rewrite of [`audio-helper`](https://github.com/warith-harchaoui/audio-helper). Same promise, file-level audio utilities on top of `ffmpeg`/`ffprobe` — not a line-by-line port of the Python code, idiomatic Rust throughout.
 
-## v0.1 scope
+## Scope
 
 | Function | What it does |
 |---|---|
@@ -14,6 +14,7 @@ Rust rewrite of [`audio-helper`](https://github.com/warith-harchaoui/audio-helpe
 | `get_audio_duration(path) -> Result<f64>` | Duration in seconds, via `ffprobe`. |
 | `convert(input, output, &ConvertOptions) -> Result<()>` | Re-encode at a given sample rate / channel count / codec. `overwrite: false` skips the work if a valid output already exists. |
 | `load(path, &LoadOptions) -> Result<PcmBuffer>` | Decode into memory as `f32` PCM (`Vec<f32>` + sample rate + channels) — mono by default, optional resampling. Works on any `ffmpeg`-readable input, including the audio track of a video container. |
+| `save(&PcmBuffer, path) -> Result<()>` | Write PCM back to a file, the inverse of `load`. A `.wav` is written directly (no `ffmpeg` needed); any other extension goes through `convert`, so the codec follows the extension. Samples beyond `-1.0..=1.0` are clamped, not wrapped. |
 | `extract_chunk(input, start, end, output) -> Result<()>` | Cut a `[start, end)` slice (seconds). |
 | `generate_silence(duration, output, sample_rate) -> Result<()>` | Write a silent file of a given duration; self-checks that the result really is silent. |
 | `concatenate(inputs, output) -> Result<()>` | Join files head-to-tail via `ffmpeg`'s `concat` filter (works across mismatched codecs, unlike the `concat` demuxer). |
@@ -32,35 +33,35 @@ println!("{} seconds", get_audio_duration(&path)?);
 
 - **`separate_sources`** (Demucs source separation): needs a real ML stack (`torch`/`torchaudio`), disproportionate to this crate's promise. Same call as `youtube-helper-rs` not reimplementing `yt-dlp` itself — a v0.1 that shells out to a Python/Demucs process, rather than a native Rust reimplementation, would be the natural next step if this is ever needed here.
 - **`sound_resemblance`** (MFCC-based similarity score): specialized DSP (mel filter banks, MFCC) that belongs in its own crate rather than bolted onto file-level utilities.
-- **`load`/`save` round-tripping through `torch.Tensor`/`np.ndarray`**: this crate returns plain `Vec<f32>` — no tensor library dependency for a library crate. Saving a `Vec<f32>` back to a file is just `convert` fed a WAV written via [`hound`](https://crates.io/crates/hound), already a direct dependency.
+- **`load`/`save` round-tripping through `torch.Tensor`/`np.ndarray`**: this crate returns a plain `Vec<f32>` — no tensor library dependency for a library crate. The round trip itself is here: `save` is the inverse of `load` (added in 0.2.0).
 
 ## Installation
 
-Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`).
+Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`), and Rust 1.88 or newer.
 
 ```toml
 [dependencies]
-audio-helper-rs = "0.1"
+audio-helper-rs = "0.2"
 ```
 
 ## Project status
 
 - `cargo build`: clean, no warnings.
-- `cargo test`: **20 unit tests + 1 doctest passing**, 0 failures — every test runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked.
+- `cargo test`: **26 unit tests + 1 doctest passing**, 0 failures — every test that needs one runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked. Without `ffmpeg` installed those tests skip with a printed reason instead of failing; under CI (`$CI` set) they fail loudly, because there a missing `ffmpeg` means the workflow is broken.
 - `cargo clippy --all-targets`: clean, no warnings.
-- **Measured code coverage** (`cargo llvm-cov`): **88.76% line coverage** (623 lines, 70 uncovered), 83.08% function coverage, 89.90% region coverage. Per-file breakdown:
+- **Measured code coverage** (`cargo llvm-cov`, re-measured 2026-10-02 for 0.2.0): **91.19% line coverage** (795 lines, 70 uncovered), 87.06% function coverage, 91.41% region coverage. Per-file breakdown:
 
   | File | Line coverage |
   |---|---|
-  | `chunk.rs` | 89.47% |
-  | `concat.rs` | 86.54% |
-  | `convert.rs` | 93.98% |
-  | `ffmpeg.rs` | 81.48% (the `MissingBinary` branch needs `ffmpeg` actually absent from `PATH` to exercise, not reproduced in a normal CI box) |
-  | `pcm.rs` | 90.91% |
-  | `probe.rs` | 82.88% (ffprobe JSON edge cases — a stream reporting no `duration` at all — aren't fixture-able without a corrupt file) |
-  | `roomtone.rs` | 90.77% |
-  | `silence.rs` | 87.80% |
-  | `split.rs` | 94.83% |
+  | `chunk.rs` | 90.00% |
+  | `concat.rs` | 86.79% |
+  | `convert.rs` | 94.12% |
+  | `ffmpeg.rs` | 82.14% (the `MissingBinary` branch needs `ffmpeg` actually absent from `PATH` to exercise, which is exactly the case the test suite now skips rather than fails on) |
+  | `pcm.rs` | 97.85% |
+  | `probe.rs` | 83.04% (ffprobe JSON edge cases — a stream reporting no `duration` at all — aren't fixture-able without a corrupt file) |
+  | `roomtone.rs` | 91.04% |
+  | `silence.rs` | 88.10% |
+  | `split.rs` | 95.00% |
 
   To reproduce:
 

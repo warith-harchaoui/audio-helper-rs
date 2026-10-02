@@ -81,10 +81,11 @@ pub fn mix_room_tone(input: &Path, output: &Path, options: &RoomToneOptions) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutil::write_test_wav;
+    use crate::testutil::{require_ffmpeg, write_test_wav};
 
     #[test]
     fn mixes_and_preserves_roughly_the_input_duration() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("speech.wav");
         write_test_wav(&input, 16_000, 1.0);
@@ -98,6 +99,7 @@ mod tests {
 
     #[test]
     fn rejects_unsupported_color() {
+        require_ffmpeg!();
         let dir = tempfile::tempdir().unwrap();
         let input = dir.path().join("speech.wav");
         write_test_wav(&input, 16_000, 1.0);

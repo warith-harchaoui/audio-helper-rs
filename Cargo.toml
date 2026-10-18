@@ -22,11 +22,19 @@ authors = ["Warith HARCHAOUI <warithmetics@deraison.ai>"]
 keywords = ["audio", "ffmpeg", "pcm", "wav", "resampling"]
 categories = ["multimedia::audio"]
 
+[features]
+# On by default so `cargo install audio-helper-rs` produces the binary. Library users
+# who want clap out of their dependency graph depend on this crate with
+# `default-features = false`.
+default = ["cli"]
+cli = ["dep:clap"]
+
 [dependencies]
 thiserror = "2"
-# The CLI front end. `derive` keeps the argument definitions next to the types
-# they fill, the way md2star-rs already does it.
-clap = { version = "4", features = ["derive"] }
+# CLI-only, behind the `cli` feature below: a library consumer should not pay
+# for an argument parser it never calls. `derive` keeps the argument
+# definitions next to the types they fill.
+clap = { version = "4", features = ["derive"], optional = true }
 # Parses ffprobe's `-of json` output (stream/format metadata) without hand-rolling
 # a JSON reader.
 serde_json = "1"
@@ -44,3 +52,4 @@ tempfile = "3"
 # order decide which one runs.
 name = "audio-helper-rs"
 path = "src/main.rs"
+required-features = ["cli"]

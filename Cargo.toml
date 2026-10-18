@@ -15,8 +15,10 @@ rust-version = "1.88"
 description = "File-level audio utilities on top of ffmpeg: probe, convert, load to PCM, chunk, silence, concatenate, room tone, split. Rust port of audio-helper."
 license = "BSD-3-Clause"
 repository = "https://github.com/warith-harchaoui/audio-helper-rs"
+homepage = "https://deraison.ai/ai-helpers"
+documentation = "https://docs.rs/audio-helper-rs"
 readme = "README.md"
-authors = ["Warith HARCHAOUI"]
+authors = ["Warith HARCHAOUI <warithmetics@deraison.ai>"]
 keywords = ["audio", "ffmpeg", "pcm", "wav", "resampling"]
 categories = ["multimedia::audio"]
 

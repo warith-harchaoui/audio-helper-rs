@@ -44,6 +44,38 @@ Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`) a
 audio-helper-rs = "0.2"
 ```
 
+## Ligne de commande
+
+`cargo install audio-helper-rs` installe aussi un binaire `audio-helper-rs` — nommé d'après la
+crate et non d'après la commande `audio-helper` du jumeau Python, pour que les deux
+cohabitent sur un même `PATH` sans que l'un masque l'autre en silence.
+
+```bash
+audio-helper-rs probe recording.m4a
+audio-helper-rs convert recording.m4a speech.wav --sample-rate 16000 --channels 1
+audio-helper-rs split speech.wav -o pieces --seconds 30
+```
+
+En cas de succès, le résultat sur la sortie standard et un code de retour `0` ;
+en cas d'échec, une ligne sur la sortie d'erreur préfixée `audio-helper-rs: ` et un
+code `1`. Toutes les options et tous les modes d'échec :
+[`skills/audio-helper-rs/references/cli-reference.md`](skills/audio-helper-rs/references/cli-reference.md).
+
+## Skill d'agent
+
+`skills/audio-helper-rs/` empaquette cette crate en **Claude Skill** et en **skill
+OpenCode**, pour qu'un agent la découvre et l'utilise pour le compte de
+l'utilisateur. L'installation pour les deux hôtes est dans
+[`skills/README.md`](skills/README.md).
+
+Son catalogue de déclencheurs est imposé, pas décoratif :
+[`TRIGGERS.md`](TRIGGERS.md) est le catalogue destiné aux humains,
+`references/triggers.md` en est le miroir destiné à l'agent, et
+`tests/skill.rs` fait échouer `cargo test` — donc le hook de pré-push — si les
+deux divergent, si la `description` du skill dépasse le plafond publié de 1024
+caractères, si son `name` cesse de correspondre à son dossier ou s'il pointe
+vers une référence qui n'existe plus.
+
 ## État du projet
 
 - `cargo build` : OK, aucun avertissement.

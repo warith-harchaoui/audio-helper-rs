@@ -44,6 +44,35 @@ Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`), and Ru
 audio-helper-rs = "0.2"
 ```
 
+## Command line
+
+`cargo install audio-helper-rs` also installs a `audio-helper-rs` binary — named after the
+crate, not after the Python twin's `audio-helper`, so the two coexist on one `PATH`
+without either silently shadowing the other.
+
+```bash
+audio-helper-rs probe recording.m4a
+audio-helper-rs convert recording.m4a speech.wav --sample-rate 16000 --channels 1
+audio-helper-rs split speech.wav -o pieces --seconds 30
+```
+
+Success prints the result on stdout and exits `0`; failure prints one line on
+stderr, prefixed `audio-helper-rs: `, and exits `1`. Every flag and every failure mode:
+[`skills/audio-helper-rs/references/cli-reference.md`](skills/audio-helper-rs/references/cli-reference.md).
+
+## Agent skill
+
+`skills/audio-helper-rs/` packages this crate as a **Claude Skill** and an **OpenCode
+skill**, so an agent can discover it and use it on the user's behalf.
+Installation for both hosts is in [`skills/README.md`](skills/README.md).
+
+Its trigger catalogue is enforced, not decorative: [`TRIGGERS.md`](TRIGGERS.md)
+is the user-facing catalogue, `references/triggers.md` is its agent-facing
+mirror, and `tests/skill.rs` fails `cargo test` — and therefore the pre-push
+hook — if the two drift apart, if the skill's `description` exceeds the
+published 1024-character cap, if its `name` stops matching its folder or if it
+points at a reference that no longer exists.
+
 ## Project status
 
 - `cargo build`: clean, no warnings.

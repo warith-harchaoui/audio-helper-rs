@@ -49,11 +49,16 @@ fractional.
 ## `concat`
 
 ```
-audio-helper-rs concat <OUTPUT> <INPUT> <INPUT> [INPUT...]
+audio-helper-rs concat -o <OUTPUT> <INPUT> <INPUT> [INPUT...]
 ```
 
 Joins in the order given. Two inputs minimum — joining one file is a copy, and
 the command refuses rather than pretending to work.
+
+The destination is a flag, not a positional, because the inputs are variadic:
+an output positional cannot sit last among them the way `convert` and `chunk`
+put it, and putting it first made `concat a.wav b.wav c.wav` overwrite
+`a.wav`. Passing a source as the destination is refused outright.
 
 ## `split`
 

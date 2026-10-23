@@ -63,10 +63,15 @@ enum Command {
     },
     /// Concatenate several files, in the order given, into one.
     Concat {
-        output: PathBuf,
         /// Two or more input files.
         #[arg(required = true, num_args = 2..)]
         inputs: Vec<PathBuf>,
+        /// Destination file. A flag rather than a positional: the inputs are
+        /// variadic, so an output positional cannot sit last among them, and
+        /// putting it first made `concat a.wav b.wav c.wav` -- the order every
+        /// other subcommand here uses -- silently overwrite `a.wav`.
+        #[arg(short, long)]
+        output: PathBuf,
     },
     /// Cut a file into fixed-duration pieces.
     Split {

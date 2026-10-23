@@ -62,6 +62,13 @@ pub enum AudioHelperError {
     #[error("at least one audio file is required")]
     EmptyInputList,
 
+    /// The destination is also one of the sources. ffmpeg would read and write
+    /// the same path at once, and the input is gone either way. Refused rather
+    /// than attempted: there is no reading of this command under which
+    /// destroying one of the inputs is what the caller wanted.
+    #[error("{0} is both an input and the output; refusing to overwrite a source file")]
+    OutputIsInput(PathBuf),
+
     /// The buffer handed to [`crate::pcm::save`] cannot be interpreted as
     /// interleaved audio: zero channels, zero sample rate, more channels than a
     /// WAV header can express, or a sample count that is not a whole number of

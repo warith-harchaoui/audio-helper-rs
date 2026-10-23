@@ -4,6 +4,38 @@ All notable changes to `audio-helper-rs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-10-23
+
+A destructive argument order, found by running the binary rather than by reading
+it. Minor rather than patch because the `concat` CLI signature changes.
+
+### Fixed
+- **`concat` no longer overwrites one of its own inputs.** Every other
+  two-file subcommand here is `<input> <output>` — `convert`, `chunk`,
+  `roomtone` — but `concat` takes a variable number of inputs, so its output
+  could not sit last among the positionals and sat *first* instead. A caller
+  carrying over the order the siblings teach wrote
+  `concat a.wav b.wav c.wav`, which handed `a.wav` to the output slot.
+  `ffmpeg` truncated it, wrote `b`+`c` into it, and exited 0: a one-second
+  file came back five seconds long holding someone else's audio, with
+  `a.wav` printed as though that were a success. Verified against real
+  files before and after.
+
+### Changed
+- **`concat` now takes its destination as `-o/--output`** and its inputs as
+  plain positionals, so every positional in the CLI is an input and the output
+  cannot be mistaken for one. `audio-helper-rs concat -o joined.wav a.wav b.wav`.
+  This is the breaking part: the old `concat <output> <inputs>...` spelling now
+  fails with a missing-argument error instead of doing something destructive.
+
+### Added
+- `AudioHelperError::OutputIsInput`, raised by `concat` when the destination
+  resolves to one of the sources. The library call is still reachable with the
+  paths the wrong way round, and `-o a.wav a.wav b.wav` spells the same mistake
+  through the new flag, so the guard sits under both rather than only in the
+  argument parser. Paths are compared canonically where the filesystem allows
+  it, so `./a.wav` and `a.wav` are recognised as one file.
+
 ## [0.2.0] — 2026-10-02
 
 The missing half of the round trip, and a test suite that no longer lies about its

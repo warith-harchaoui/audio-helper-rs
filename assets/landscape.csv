@@ -1,0 +1,8 @@
+Rust Audio Wrangling,Multi-format decode,Encode / conversion,Split / concat / silence,Room tone,In-process (no subprocess),Typed errors,Light dependency tree,Pipeline ergonomics
+audio-helper-rs,5,5,5,5,2,5,5,5
+symphonia,5,1,2,1,5,4,4,3
+rodio,4,1,1,1,5,3,3,2
+hound,1,2,1,1,5,3,5,2
+ffmpeg-next,5,5,4,2,5,2,1,2
+rsmpeg,5,5,4,2,5,2,1,1
+video-rs,4,3,1,1,5,3,2,3

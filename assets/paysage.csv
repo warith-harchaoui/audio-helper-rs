@@ -1,0 +1,8 @@
+Manipulation audio en Rust,Décodage multi-format,Encodage / conversion,Découpage / concat / silence,Fond sonore,En processus (sans sous-processus),Erreurs typées,Arbre de dépendances léger,Ergonomie de pipeline
+audio-helper-rs,5,5,5,5,2,5,5,5
+symphonia,5,1,2,1,5,4,4,3
+rodio,4,1,1,1,5,3,3,2
+hound,1,2,1,1,5,3,5,2
+ffmpeg-next,5,5,4,2,5,2,1,2
+rsmpeg,5,5,4,2,5,2,1,1
+video-rs,4,3,1,1,5,3,2,3

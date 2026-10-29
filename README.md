@@ -35,6 +35,10 @@ println!("{} seconds", get_audio_duration(&path)?);
 - **`sound_resemblance`** (MFCC-based similarity score): specialized DSP (mel filter banks, MFCC) that belongs in its own crate rather than bolted onto file-level utilities.
 - **`load`/`save` round-tripping through `torch.Tensor`/`np.ndarray`**: this crate returns a plain `Vec<f32>` — no tensor library dependency for a library crate. The round trip itself is here: `save` is the inverse of `load` (added in 0.2.0).
 
+## How it works
+
+![How audio-helper-rs works: one audio file in, ffmpeg driven from typed Rust, files and PCM out](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/master/assets/diagrams/how-it-works.png)
+
 ## Installation
 
 Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`), and Rust 1.88 or newer.

@@ -35,6 +35,10 @@ println!("{} secondes", get_audio_duration(&path)?);
 - **`sound_resemblance`** (score de similarité par MFCC) : du DSP spécialisé (bancs de filtres mel, MFCC) qui mérite son propre crate plutôt que d'être greffé sur des utilitaires de niveau fichier.
 - **Aller-retour `load`/`save` via `torch.Tensor`/`np.ndarray`** : ce crate renvoie un simple `Vec<f32>`, sans dépendance à une bibliothèque de tenseurs pour un crate bibliothèque. L'aller-retour lui-même existe : `save` est l'inverse de `load` (ajouté en 0.2.0).
 
+## Comment ça marche
+
+![Comment audio-helper-rs fonctionne : un fichier audio en entrée, ffmpeg piloté depuis un Rust typé, des fichiers et du PCM en sortie](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/master/assets/diagrams/comment-ca-marche.png)
+
 ## Installation
 
 Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`) ainsi que Rust 1.88 ou plus récent.
@@ -116,15 +120,15 @@ cargo test --all
 scripts/check-fresh-resolve.sh   # compile sans Cargo.lock, comme un consommateur en aval
 ```
 
-Le dernier existe parce que les trois autres, et la CI, compilent tous contre le
+Le dernier existe parce que les trois autres et la CI, compilent tous contre le
 `Cargo.lock` commité — que personne n'utilise en aval du crate publié. Un intervalle de
 dépendance devenu mauvais reste vert ici tout en cassant chaque `cargo add` / `cargo
-install` neuf, et `cargo publish --dry-run` ne le voit pas non plus (il vérifie avec le
+install` neuf et `cargo publish --dry-run` ne le voit pas non plus (il vérifie avec le
 même lock). La CI lance ce contrôle une fois, sous Linux.
 
 ## Projets liés
 
-Fait partie du même socle d'outils locaux que [`audio-helper`](https://github.com/warith-harchaoui/audio-helper) (Python), [`podcast-helper-rs`](https://github.com/warith-harchaoui/podcast-helper-rs), [`capture-helper-rs`](https://github.com/warith-harchaoui/capture-helper-rs), [`youtube-helper-rs`](https://github.com/warith-harchaoui/youtube-helper-rs), et la suite [AI Helpers](https://github.com/warith-harchaoui/ai-helpers). Réécriture indépendante, pas une liaison (*binding*).
+Fait partie du même socle d'outils locaux que [`audio-helper`](https://github.com/warith-harchaoui/audio-helper) (Python), [`podcast-helper-rs`](https://github.com/warith-harchaoui/podcast-helper-rs), [`capture-helper-rs`](https://github.com/warith-harchaoui/capture-helper-rs), [`youtube-helper-rs`](https://github.com/warith-harchaoui/youtube-helper-rs) et la suite [AI Helpers](https://github.com/warith-harchaoui/ai-helpers). Réécriture indépendante, pas une liaison (*binding*).
 
 ## Licence
 

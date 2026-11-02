@@ -69,10 +69,21 @@ relief*. Sur cette machine Apple Silicon, sur 600 s d'audio et trois essais chac
 | `aac_at` (AudioToolbox) | 2,92 s · 3,33 s · 3,26 s |
 
 Les plages se recouvrent : **l'encodeur de la plateforme n'est pas plus rapide ici de façon
-significative**, quoi qu'on ait pu supposer. D'où la règle : un candidat venu après ne détrône
-le sortant que s'il le bat de plus de 5 %, sinon le verdict — qui est mis en cache — ne serait
-qu'un tirage au sort rendu permanent. Quand l'écart est réel, la mesure tranche ; quand il ne
-l'est pas, l'ordre de préférence documenté reste.
+significative**, quoi qu'on ait pu supposer.
+
+Ce qui fixe l'ordre des règles, et la première a été apprise à la dure. Classés sur la seule
+vitesse, la CI l'a attrapé dès le premier passage : sur Linux, `libshine` encode le MP3 plus
+vite que `libmp3lame` et **ne sait pas encoder à 8 kHz du tout**, puisqu'il ne gère que trois
+fréquences. Un encodeur qui ne sait pas encoder votre audio n'est pas un encodeur rapide : ce
+n'est pas un candidat. Chaque candidat est donc mis à l'essai sur la fréquence et le nombre de
+canaux *réels*, et celui qui échoue sort — sans avoir à tenir une table des caprices de chacun.
+
+Parmi les survivants, c'est l'ordre de préférence qui gagne, parce qu'il est classé par qualité
+et par plateforme, et qu'échanger de la qualité audible contre quelques millisecondes serait un
+mauvais marché. Seule une victoire *nette* — le même travail en moins des deux tiers du temps —
+le renverse. Cette clause est ce qui empêche un accélérateur d'être pathologique, ce dont
+`vocal-helper-rs` a souffert ; une petite marge, elle, aurait échangé la qualité contre du bruit
+de mesure, et mis le tirage au sort en cache.
 
 **Un choix explicite gagne toujours, et n'est ni mesuré ni rediscuté :**
 

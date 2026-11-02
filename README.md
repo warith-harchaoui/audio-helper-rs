@@ -68,10 +68,21 @@ Apple Silicon machine, over 600 s of audio and three runs each:
 | `aac_at` (AudioToolbox) | 2.92 s · 3.33 s · 3.26 s |
 
 The ranges overlap: **the platform encoder is not meaningfully faster here**, whatever one
-might have assumed. That is why a later candidate must beat the incumbent by more than 5 % to
-displace it — otherwise the verdict, which is then cached, would be a coin toss made
-permanent. Where the difference is real, the measurement decides; where it is not, the
-documented preference order stands.
+might have assumed.
+
+Which sets the order of the rules, and the first one was learned the hard way. Ranking on
+speed alone, CI caught it on the first run: on Linux `libshine` encodes MP3 faster than
+`libmp3lame` and **cannot encode at 8 kHz at all**, supporting exactly three sample rates. An
+encoder that cannot encode your audio is not a fast encoder; it is not a candidate. So each
+candidate is trialled on the *actual* target rate and channel count, and one that fails is out
+— no table of per-encoder quirks required.
+
+Among the survivors the preference order wins, because it is ordered by quality and platform
+and trading audible quality for a few milliseconds would be a poor bargain. Only a *decisive*
+win — the same work in under two-thirds of the time — overturns it. That clause is what stops
+an accelerator from being pathological, which is exactly what `vocal-helper-rs` suffered; a
+small margin would instead have traded quality for measurement noise, and cached the coin
+toss.
 
 **An explicit choice always wins, and is never measured or second-guessed:**
 

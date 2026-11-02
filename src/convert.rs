@@ -50,7 +50,14 @@ impl Default for ConvertOptions {
 pub fn chosen_encoder(output: &Path, options: &ConvertOptions) -> Option<crate::accel::Choice> {
     let ext = output.extension().and_then(|e| e.to_str())?;
     let family = crate::accel::Family::from_extension(ext)?;
-    crate::accel::choose(family, options.encoder.as_deref())
+    crate::accel::choose(
+        family,
+        options.encoder.as_deref(),
+        crate::accel::Shape {
+            sample_rate: options.sample_rate,
+            channels: options.channels,
+        },
+    )
 }
 
 /// Converts `input` to `output`, re-encoding at `options.sample_rate` /

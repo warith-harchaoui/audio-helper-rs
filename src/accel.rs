@@ -18,16 +18,32 @@
 //! So the best default is machine-dependent, which is exactly the thing a
 //! hardcoded `-acodec` cannot be.
 //!
-//! # And it is measured, not reasoned
+//! # The candidate must be able to do the job, and only then be fast
 //!
-//! The sibling crate `vocal-helper-rs` learned this the hard way: putting the
-//! obvious accelerator first made its workload *twice as slow*, because the
-//! accelerator fragmented the graph. A platform encoder is not automatically the
-//! fast one either — `aac_at` is excellent on Apple Silicon and merely adequate
-//! on an older Intel Mac. So this module asks the machine: it encodes one second
-//! of signal with each candidate that is actually installed, keeps the fastest,
-//! and remembers the verdict on disk so the question is asked once per machine
-//! and per ffmpeg build.
+//! The first version of this module ranked candidates by speed alone, and CI
+//! caught it on the first run. On Linux, `libshine` encodes MP3 measurably
+//! faster than `libmp3lame` — and cannot encode at 8 kHz at all, because it
+//! supports exactly three sample rates. A conversion that had worked for years
+//! started failing. An encoder that cannot encode your audio is not a fast
+//! encoder; it is not a candidate.
+//!
+//! So the order here is: **capable first, preferred second, fast only as a
+//! tie-break**. Each candidate is trialled on the *actual* target rate and
+//! channel count, which rejects `libshine` at 8 kHz without needing a table of
+//! each encoder's quirks. Among the survivors the documented preference order
+//! wins — it is ordered by quality and platform, and trading audible quality for
+//! a few milliseconds of encode time would be a poor bargain — unless a later
+//! candidate is *dramatically* faster, which is the case the measurement is
+//! really there to catch.
+//!
+//! That last clause is the lesson from the sibling crate `vocal-helper-rs`,
+//! which put the obvious accelerator first and made its workload twice as slow
+//! because the accelerator fragmented the graph. Preference must not be able to
+//! choose something pathological; it just should not be overturned by noise.
+//!
+//! The verdict is remembered on disk, keyed by ffmpeg build, codec family, rate
+//! and channel count, so the trials happen once per machine and per shape of
+//! job rather than once per call.
 //!
 //! # Order of authority
 //!
@@ -92,6 +108,20 @@ impl Family {
             Self::Flac => "flac",
         }
     }
+}
+
+/// The shape of the job an encoder is being chosen for.
+///
+/// It is part of the question, not a detail: `libshine` encodes MP3 at 44.1,
+/// 48 and 32 kHz and at nothing else, so "which encoder is best" has no answer
+/// until you say at what rate. It is also part of the cache key, for the same
+/// reason.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Shape {
+    /// Target sample rate, in hertz.
+    pub sample_rate: u32,
+    /// Target channel count.
+    pub channels: u32,
 }
 
 /// Which rung of the ladder produced an encoder choice.
@@ -203,7 +233,7 @@ pub fn parse_encoder_list(stdout: &str) -> Vec<String> {
 /// Returns `None` when no candidate is installed, which means "say nothing to
 /// ffmpeg and let it pick its own default" — the one case where being quiet is
 /// right, because ffmpeg's default for a container is always a working encoder.
-pub fn choose(family: Family, explicit: Option<&str>) -> Option<Choice> {
+pub fn choose(family: Family, explicit: Option<&str>, shape: Shape) -> Option<Choice> {
     if let Some(name) = explicit.filter(|n| !n.trim().is_empty()) {
         return Some(Choice {
             encoder: name.trim().to_string(),
@@ -232,14 +262,14 @@ pub fn choose(family: Family, explicit: Option<&str>) -> Option<Choice> {
             reason: Reason::Sole,
         }),
         _ => {
-            if let Some(remembered) = recall(family, &present) {
+            if let Some(remembered) = recall(family, shape, &present) {
                 return Some(Choice {
                     encoder: remembered,
                     reason: Reason::Remembered,
                 });
             }
-            let winner = fastest(&present)?;
-            remember(family, &winner);
+            let winner = fastest(&present, shape)?;
+            remember(family, shape, &winner);
             Some(Choice {
                 encoder: winner,
                 reason: Reason::Measured,
@@ -248,31 +278,46 @@ pub fn choose(family: Family, explicit: Option<&str>) -> Option<Choice> {
     }
 }
 
-/// How much faster a later candidate must be to displace an earlier one. Below
-/// this, the two are called equal and the order in [`candidates`] decides.
+/// How much faster a later candidate must be to displace an earlier, preferred
+/// one: a third of the time, not a few per cent.
 ///
-/// Five per cent is not arbitrary: measured here on 600 s of audio, ffmpeg's
-/// native `aac` took 3.11–3.55 s across three runs and AudioToolbox's `aac_at`
-/// took 2.92–3.33 s. The ranges overlap, so a strict `<` would hand the verdict
-/// to whichever run happened to land first — and the cache would then make that
-/// coin toss permanent.
-const DISPLACEMENT_MARGIN: f64 = 0.05;
+/// The bar is high on purpose. Measured here on 600 s of audio, ffmpeg's native
+/// `aac` took 3.11–3.55 s across three runs and AudioToolbox's `aac_at` took
+/// 2.92–3.33 s — overlapping ranges, so a small margin would hand the verdict to
+/// whichever run happened to land first, and the cache would make that coin toss
+/// permanent. Worse, it would trade quality for noise: `libshine` beats
+/// `libmp3lame` on speed and loses on sound. Only a difference big enough to
+/// change how the tool feels is worth overruling the preference order.
+const DECISIVE_SPEEDUP: f64 = 0.66;
 
 /// Times each installed candidate and returns the winner. `None` only if the
 /// list is empty; a candidate that fails to run simply does not compete, and if
 /// none of them run (an ffmpeg built without `lavfi`, say) the first candidate
 /// stands.
-fn fastest(present: &[&'static str]) -> Option<String> {
+fn fastest(present: &[&'static str], shape: Shape) -> Option<String> {
     let timings: Vec<(String, f64)> = present
         .iter()
-        .filter_map(|e| time_encoder(e).map(|secs| ((*e).to_string(), secs)))
+        .filter_map(|e| time_encoder(e, shape).map(|secs| ((*e).to_string(), secs)))
         .collect();
-    pick_with_margin(present, &timings)
+    // A candidate that produced no timing could not encode this shape of audio
+    // -- `libshine` at 8 kHz, say -- and must not be fallen back to either, so
+    // the fallback at the end of `pick_with_margin` is given the survivors only.
+    let capable: Vec<&'static str> = present
+        .iter()
+        .copied()
+        .filter(|e| timings.iter().any(|(n, _)| n == e))
+        .collect();
+    if capable.is_empty() {
+        // Nothing could be trialled: an ffmpeg without `lavfi`, most likely.
+        // Fall back to the preferred candidate rather than to silence.
+        return present.first().map(|n| (*n).to_string());
+    }
+    pick_with_margin(&capable, &timings)
 }
 
 /// The verdict rule, kept pure so it can be tested without ffmpeg: walk the
-/// candidates in preference order, and only let a later one win if it beats the
-/// incumbent by more than [`DISPLACEMENT_MARGIN`].
+/// candidates in preference order, and only let a later one win if it does the
+/// same work in less than [`DECISIVE_SPEEDUP`] of the incumbent's time.
 fn pick_with_margin(ordered: &[&'static str], timings: &[(String, f64)]) -> Option<String> {
     let timed = |name: &str| timings.iter().find(|(n, _)| n == name).map(|(_, t)| *t);
 
@@ -284,7 +329,7 @@ fn pick_with_margin(ordered: &[&'static str], timings: &[(String, f64)]) -> Opti
         match best {
             None => best = Some((candidate, secs)),
             Some((_, incumbent)) => {
-                if secs < incumbent * (1.0 - DISPLACEMENT_MARGIN) {
+                if secs < incumbent * DECISIVE_SPEEDUP {
                     best = Some((candidate, secs));
                 }
             }
@@ -298,8 +343,10 @@ fn pick_with_margin(ordered: &[&'static str], timings: &[(String, f64)]) -> Opti
 /// rather than one because process start-up is tens of milliseconds and would
 /// otherwise be most of what gets compared. `None` if the encode failed, so a
 /// candidate that cannot run simply does not compete.
-fn time_encoder(encoder: &str) -> Option<f64> {
+fn time_encoder(encoder: &str, shape: Shape) -> Option<f64> {
     let started = Instant::now();
+    let rate = shape.sample_rate.to_string();
+    let channels = shape.channels.to_string();
     let status = Command::new("ffmpeg")
         .args([
             "-hide_banner",
@@ -308,9 +355,11 @@ fn time_encoder(encoder: &str) -> Option<f64> {
             "-f",
             "lavfi",
             "-i",
-            "sine=frequency=440:duration=10:sample_rate=44100",
+            &format!("sine=frequency=440:duration=10:sample_rate={rate}"),
+            "-ar",
+            &rate,
             "-ac",
-            "1",
+            &channels,
             "-acodec",
             encoder,
             "-f",
@@ -343,8 +392,14 @@ fn cache_path() -> Option<PathBuf> {
 /// The key a verdict is filed under. The ffmpeg build is part of it on purpose:
 /// an upgrade can add a platform encoder, or make a software one faster, and a
 /// verdict from the previous build would then be quietly wrong.
-fn cache_key(family: Family) -> String {
-    format!("{}|{}", ffmpeg_build(), family.as_str())
+fn cache_key(family: Family, shape: Shape) -> String {
+    format!(
+        "{}|{}|{}|{}",
+        ffmpeg_build(),
+        family.as_str(),
+        shape.sample_rate,
+        shape.channels
+    )
 }
 
 fn ffmpeg_build() -> &'static str {
@@ -374,18 +429,18 @@ fn read_cache() -> BTreeMap<String, String> {
 
 /// A remembered verdict, but only if that encoder is *still* installed — an
 /// ffmpeg reinstalled without `libfdk_aac` must not keep being told to use it.
-fn recall(family: Family, present: &[&'static str]) -> Option<String> {
-    let remembered = read_cache().get(&cache_key(family)).cloned()?;
+fn recall(family: Family, shape: Shape, present: &[&'static str]) -> Option<String> {
+    let remembered = read_cache().get(&cache_key(family, shape)).cloned()?;
     present
         .iter()
         .any(|p| *p == remembered)
         .then_some(remembered)
 }
 
-fn remember(family: Family, encoder: &str) {
+fn remember(family: Family, shape: Shape, encoder: &str) {
     let Some(path) = cache_path() else { return };
     let mut cache = read_cache();
-    cache.insert(cache_key(family), encoder.to_string());
+    cache.insert(cache_key(family, shape), encoder.to_string());
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
@@ -399,6 +454,13 @@ fn remember(family: Family, encoder: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A shape every encoder here can handle, for the tests that are about
+    /// something else.
+    const CD: Shape = Shape {
+        sample_rate: 44_100,
+        channels: 2,
+    };
 
     #[test]
     fn families_come_from_output_extensions() {
@@ -447,19 +509,19 @@ mod tests {
 
     #[test]
     fn an_explicit_encoder_wins_and_is_not_measured() {
-        let chosen = choose(Family::Aac, Some("libfdk_aac")).expect("explicit always answers");
+        let chosen = choose(Family::Aac, Some("libfdk_aac"), CD).expect("explicit always answers");
         assert_eq!(chosen.encoder, "libfdk_aac");
         assert_eq!(chosen.reason, Reason::Explicit);
         // Even one that does not exist on this machine: the caller said so, and
         // guessing past an explicit instruction is how silent surprises happen.
-        let absurd = choose(Family::Mp3, Some("not_a_real_encoder")).unwrap();
+        let absurd = choose(Family::Mp3, Some("not_a_real_encoder"), CD).unwrap();
         assert_eq!(absurd.encoder, "not_a_real_encoder");
     }
 
     #[test]
     fn whitespace_is_not_an_explicit_choice() {
         // `Some("")` comes from an empty config field, and means "no opinion".
-        let chosen = choose(Family::Flac, Some("   "));
+        let chosen = choose(Family::Flac, Some("   "), CD);
         assert!(chosen.is_none_or(|c| c.reason != Reason::Explicit));
     }
 
@@ -487,6 +549,20 @@ mod tests {
     }
 
     #[test]
+    fn an_encoder_that_cannot_do_the_job_is_not_a_candidate() {
+        // The bug CI caught: ranked on speed alone, `libshine` wins MP3 on Linux
+        // and then cannot encode at 8 kHz, where it supports exactly three
+        // rates. A candidate that produces no timing failed its trial, so it
+        // must not win -- nor be fallen back to.
+        let ordered = ["libmp3lame", "libshine"];
+        let timings = [("libmp3lame".to_string(), 2.0)];
+        assert_eq!(
+            pick_with_margin(&ordered, &timings),
+            Some("libmp3lame".into())
+        );
+    }
+
+    #[test]
     fn a_tie_goes_to_the_preferred_candidate() {
         // The real measurement, rounded: the platform encoder and the software
         // one are indistinguishable, so the platform one keeps its place rather
@@ -497,12 +573,19 @@ mod tests {
     }
 
     #[test]
-    fn a_clear_win_displaces_the_preferred_candidate() {
-        // And when the difference is real — the case this whole module exists
-        // for — the measurement overrules the preference.
+    fn only_a_decisive_win_displaces_the_preferred_candidate() {
+        // Preference is ordered by quality and platform, so overturning it must
+        // take a difference big enough to change how the tool feels -- here a
+        // candidate that does the same work in two-fifths of the time.
         let ordered = ["aac_at", "aac"];
-        let timings = [("aac_at".to_string(), 3.00), ("aac".to_string(), 1.20)];
-        assert_eq!(pick_with_margin(&ordered, &timings), Some("aac".into()));
+        let decisive = [("aac_at".to_string(), 3.00), ("aac".to_string(), 1.20)];
+        assert_eq!(pick_with_margin(&ordered, &decisive), Some("aac".into()));
+
+        // Ten per cent is not decisive: `libshine` is faster than `libmp3lame`
+        // and worse, and this is the rule that stops the tool from taking that
+        // trade on its own.
+        let marginal = [("aac_at".to_string(), 3.00), ("aac".to_string(), 2.70)];
+        assert_eq!(pick_with_margin(&ordered, &marginal), Some("aac_at".into()));
     }
 
     #[test]

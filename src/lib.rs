@@ -26,6 +26,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod accel;
 pub mod chunk;
 pub mod concat;
 pub mod convert;

@@ -31,6 +31,7 @@ pub fn generate_silence(duration: f64, output: &Path, sample_rate: u32) -> Resul
                 channels: 1,
                 encoding: None,
                 overwrite: true,
+                encoder: None,
             },
         )?;
     }

@@ -39,6 +39,58 @@ println!("{} secondes", get_audio_duration(&path)?);
 
 ![Comment audio-helper-rs fonctionne : un fichier audio en entrée, ffmpeg piloté depuis un Rust typé, des fichiers et du PCM en sortie](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/master/assets/diagrams/comment-ca-marche.png)
 
+## Quel encodeur, et qui l'a décidé
+
+Une sortie compressée doit bien être encodée par *quelque chose*, et ce quelque chose dépend de
+la machine. Il n'y a pas de chemin GPU qui vaille la peine pour de l'audio — un GPU décode de la
+vidéo, et un flux audio est bien trop petit pour payer le voyage sur le bus — mais la couche
+codec du système, elle, existe, et elle s'appuie sur du silicium dédié sur les machines
+récentes :
+
+| plateforme | ce qu'elle offre | nom chez ffmpeg |
+|---|---|---|
+| macOS / iOS | AudioToolbox | `aac_at`, `alac_at` |
+| Windows | Media Foundation | `aac_mf`, `mp3_mf` |
+| Linux et le reste | pas de couche codec système | les encodeurs de ffmpeg, accélérés SIMD (AVX2, NEON) à l'exécution, sans drapeau à poser |
+
+Donc `convert` ne laisse plus ffmpeg retomber sur son encodeur portable par défaut. Il demande à
+cette machine lequel des encodeurs installés est le plus rapide, en les **chronométrant** sur
+dix secondes de signal, et retient le verdict dans le dossier de cache du système, attaché à la
+version de ffmpeg — la question est donc posée une fois par machine, pas une fois par appel.
+
+C'est mesuré plutôt que raisonné parce que le raisonnement sur les accélérateurs n'est pas
+fiable : la caisse voisine `vocal-helper-rs` a mis l'accélérateur évident en tête et a rendu son
+travail deux fois plus lent. Et ici la mesure gagne sa place en donnant une réponse *sans
+relief*. Sur cette machine Apple Silicon, sur 600 s d'audio et trois essais chacun :
+
+| encodeur | essais |
+|---|---|
+| `aac` (celui de ffmpeg) | 3,55 s · 3,22 s · 3,11 s |
+| `aac_at` (AudioToolbox) | 2,92 s · 3,33 s · 3,26 s |
+
+Les plages se recouvrent : **l'encodeur de la plateforme n'est pas plus rapide ici de façon
+significative**, quoi qu'on ait pu supposer. D'où la règle : un candidat venu après ne détrône
+le sortant que s'il le bat de plus de 5 %, sinon le verdict — qui est mis en cache — ne serait
+qu'un tirage au sort rendu permanent. Quand l'écart est réel, la mesure tranche ; quand il ne
+l'est pas, l'ordre de préférence documenté reste.
+
+**Un choix explicite gagne toujours, et n'est ni mesuré ni rediscuté :**
+
+```sh
+audio-helper-rs convert in.wav out.m4a --encoder aac_at   # celui-là, parce que je le dis
+AUDIO_HELPER_ENCODER=aac audio-helper-rs convert in.wav out.m4a   # épinglé, sans toucher au code
+```
+
+```rust
+let options = ConvertOptions { encoder: Some("libmp3lame".into()), ..Default::default() };
+// Et pour rapporter la décision au lieu de se la demander :
+let choice = audio_helper_rs::convert::chosen_encoder(&output, &options);
+```
+
+La ligne de commande affiche quel encodeur a travaillé et de quelle autorité il tient sa place
+(`Explicit`, `Measured`, `Remembered` ou `Sole`), parce qu'un outil qui glisse en silence un
+codec de plateforme est un outil dont on ne peut plus comparer les exécutions.
+
 ## Installation
 
 Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`) ainsi que Rust 1.88 ou plus récent.

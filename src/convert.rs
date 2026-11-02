@@ -22,6 +22,13 @@ pub struct ConvertOptions {
     /// If `false` and a valid output file already exists, skip re-converting and
     /// return immediately (mirrors `_overwrite_audio_file` in the Python original).
     pub overwrite: bool,
+    /// The ffmpeg encoder to use for a *compressed* output, naming it outright
+    /// (`"aac_at"`, `"libmp3lame"`, ...). `None` means "pick the best one this
+    /// machine has", which is what [`crate::accel`] does by measuring.
+    ///
+    /// An explicit name is honoured as given: it is never measured against the
+    /// alternatives and never silently replaced. That is the point of saying it.
+    pub encoder: Option<String>,
 }
 
 impl Default for ConvertOptions {
@@ -31,8 +38,19 @@ impl Default for ConvertOptions {
             channels: 1,
             encoding: Some("pcm_s16le".to_string()),
             overwrite: true,
+            encoder: None,
         }
     }
+}
+
+/// The encoder a compressed output will be written with, and why — exposed so a
+/// caller can report it rather than wonder. `None` means ffmpeg's own default
+/// will stand, either because the container is not one this crate has an opinion
+/// about or because no candidate encoder is installed.
+pub fn chosen_encoder(output: &Path, options: &ConvertOptions) -> Option<crate::accel::Choice> {
+    let ext = output.extension().and_then(|e| e.to_str())?;
+    let family = crate::accel::Family::from_extension(ext)?;
+    crate::accel::choose(family, options.encoder.as_deref())
 }
 
 /// Converts `input` to `output`, re-encoding at `options.sample_rate` /
@@ -64,6 +82,13 @@ pub fn convert(input: &Path, output: &Path, options: &ConvertOptions) -> Result<
             args.push("-acodec".into());
             args.push(codec.into());
         }
+    } else if let Some(choice) = chosen_encoder(output, options) {
+        // A compressed container: ffmpeg would reach for its own default, which
+        // is the portable software encoder on every platform. Where the machine
+        // has a faster one — AudioToolbox on a Mac, Media Foundation on Windows
+        // — that default leaves speed on the table for no reason.
+        args.push("-acodec".into());
+        args.push(choice.encoder.into());
     }
     args.push(output.into());
 

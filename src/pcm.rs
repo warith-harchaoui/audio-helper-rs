@@ -109,10 +109,12 @@ pub fn save(buffer: &PcmBuffer, path: &Path) -> Result<()> {
         &ConvertOptions {
             sample_rate: buffer.sample_rate,
             channels: buffer.channels,
-            // Ignored for a non-WAV container; ffmpeg's own default codec for the
-            // target container is the right answer there.
+            // Ignored for a non-WAV container, where the encoder is picked by
+            // `accel` instead: the codec *family* comes from the container, and
+            // which encoder serves it best is a property of this machine.
             encoding: None,
             overwrite: true,
+            encoder: None,
         },
     )
 }

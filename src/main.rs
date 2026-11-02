@@ -46,6 +46,10 @@ enum Command {
         /// ffmpeg encoder name, for WAV output (e.g. `pcm_s16le`).
         #[arg(long)]
         encoding: Option<String>,
+        /// ffmpeg encoder for a compressed output (e.g. `aac_at`, `libmp3lame`),
+        /// overriding the one this machine measured as fastest.
+        #[arg(long)]
+        encoder: Option<String>,
         /// Fail instead of overwriting an existing output file.
         #[arg(long)]
         no_overwrite: bool,
@@ -141,16 +145,24 @@ fn main() -> ExitCode {
             sample_rate,
             channels,
             encoding,
+            encoder,
             no_overwrite,
         } => {
             let options = ConvertOptions {
                 sample_rate,
                 channels,
-                // None leaves the encoder to ffmpeg's own default for the
-                // container, which is what callers want for anything but WAV.
+                // Only consulted for a WAV output; a compressed container gets
+                // its encoder from `accel` unless `--encoder` names one.
                 encoding: encoding.or_else(|| Some("pcm_s16le".to_string())),
                 overwrite: !no_overwrite,
+                encoder,
             };
+            // Say which encoder is doing the work and on whose authority. A tool
+            // that silently swaps in a platform codec is a tool you cannot
+            // compare runs with.
+            if let Some(choice) = audio_helper_rs::convert::chosen_encoder(&output, &options) {
+                eprintln!("encoder: {} ({:?})", choice.encoder, choice.reason);
+            }
             convert(&input, &output, &options)
                 .map(|()| output.display().to_string())
                 .map_err(|e| e.to_string())

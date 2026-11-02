@@ -1,6 +1,6 @@
 # Paysage
 
-🇫🇷 Français · [🇬🇧 LANDSCAPE.md](https://github.com/warith-harchaoui/audio-helper-rs/blob/master/LANDSCAPE.md)
+🇫🇷 Français · [🇬🇧 LANDSCAPE.md](https://github.com/warith-harchaoui/audio-helper-rs/blob/main/LANDSCAPE.md)
 
 Crates voisins puis concurrents dans l'espace « manipulation de fichiers audio en Rust », comparés à `audio-helper-rs`. Les notes
 vont de ⭐ (1) à ⭐⭐⭐⭐⭐ (5), évaluées sur la tâche visée par `audio-helper-rs` :

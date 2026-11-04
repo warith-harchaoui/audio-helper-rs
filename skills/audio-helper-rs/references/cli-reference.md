@@ -26,7 +26,8 @@ the field, not the exit code.
 
 ```
 audio-helper-rs convert <INPUT> <OUTPUT>
-    [--sample-rate HZ] [--channels N] [--encoding NAME] [--no-overwrite]
+    [--sample-rate HZ] [--channels N] [--encoding NAME] [--encoder NAME]
+    [--no-overwrite]
 ```
 
 Defaults: `--sample-rate 44100`, `--channels 1` (mono), `--encoding pcm_s16le`
@@ -36,6 +37,15 @@ audio track.
 
 16 kHz mono (`--sample-rate 16000 --channels 1`) is what most speech models
 expect.
+
+For a compressed output (`.m4a`, `.aac`, `.mp4`, `.m4b`, `.mp3`, `.opus`,
+`.flac`) the encoder is chosen per machine: each installed candidate is
+trialled on the job's actual rate and channel count, the platform's preferred
+order wins unless another one does the work in under two-thirds of the time,
+and the verdict is cached per ffmpeg build. `--encoder NAME` (or the
+`AUDIO_HELPER_ENCODER` environment variable) names one outright, and it is never
+measured or replaced. Any other extension leaves the encoder to ffmpeg. The chosen encoder and its reason (`Explicit`,
+`Measured`, `Remembered`, `Sole`) are printed on stderr as `encoder: ...`.
 
 ## `chunk`
 

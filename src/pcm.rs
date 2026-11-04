@@ -67,7 +67,7 @@ pub fn load(path: &Path, options: &LoadOptions) -> Result<PcmBuffer> {
 ///
 /// A `.wav` output is written directly with [`hound`] as 16-bit signed PCM, the
 /// one format every tool reads. Any other extension goes through a temporary WAV
-/// and [`crate::convert`], so the container and codec follow the extension
+/// and [`crate::convert()`], so the container and codec follow the extension
 /// exactly as they do everywhere else in this crate, and `ffmpeg` is only needed
 /// for the non-WAV case.
 ///
@@ -79,7 +79,7 @@ pub fn load(path: &Path, options: &LoadOptions) -> Result<PcmBuffer> {
 /// - [`AudioHelperError::InvalidPcmLayout`] if the buffer does not describe whole
 ///   interleaved frames (see that variant).
 /// - [`AudioHelperError::Wav`] if the WAV itself could not be written.
-/// - whatever [`crate::convert`] returns, for a non-WAV output.
+/// - whatever [`crate::convert()`] returns, for a non-WAV output.
 pub fn save(buffer: &PcmBuffer, path: &Path) -> Result<()> {
     let channels = u16::try_from(buffer.channels).ok().filter(|c| *c > 0);
     let Some(channels) = channels else {

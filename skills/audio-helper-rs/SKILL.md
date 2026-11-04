@@ -51,6 +51,12 @@ let pcm = load(Path::new("in.mp3"), &LoadOptions {
 })?;
 ```
 
+For a compressed output `convert` picks the encoder this machine runs best
+(AudioToolbox on a Mac, Media Foundation on Windows, ffmpeg's own elsewhere),
+by trial and timing, cached per ffmpeg build. Name one with
+`ConvertOptions { encoder: Some("libmp3lame".into()), .. }`, `--encoder`, or
+`AUDIO_HELPER_ENCODER`; `convert::chosen_encoder` reports the decision.
+
 `load` / `save` / `PcmBuffer` are **library-only**: a buffer of samples is not
 something a command line can hand back. Reach for them when the next step is a
 model or a DSP routine rather than a file.

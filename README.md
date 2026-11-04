@@ -37,7 +37,7 @@ println!("{} seconds", get_audio_duration(&path)?);
 
 ## How it works
 
-![How audio-helper-rs works: one audio file in, ffmpeg driven from typed Rust, files and PCM out](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/master/assets/diagrams/how-it-works.png)
+![How audio-helper-rs works: one audio file in, ffmpeg driven from typed Rust, files and PCM out](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/main/assets/diagrams/how-it-works.png)
 
 ## Which encoder, and who decided
 
@@ -107,7 +107,7 @@ Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`), and Ru
 
 ```toml
 [dependencies]
-audio-helper-rs = "0.2"
+audio-helper-rs = "0.4"
 ```
 
 ## Command line

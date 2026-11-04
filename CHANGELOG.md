@@ -4,6 +4,34 @@ All notable changes to `audio-helper-rs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-11-04
+
+The encoder of a compressed output is now chosen for this machine, by trial,
+instead of being left to ffmpeg's portable default. Minor rather than patch
+because `ConvertOptions` gains a public field.
+
+### Added
+- **`convert` picks the encoder per machine** for `.m4a` / `.aac` / `.mp4` /
+  `.m4b`, `.mp3`, `.opus` and `.flac` outputs (new module `accel`). Candidates
+  are the platform codec layer first — AudioToolbox (`aac_at`, `alac_at`) on
+  macOS, Media Foundation (`aac_mf`, `mp3_mf`) on Windows — then ffmpeg's own.
+  Each installed candidate is trialled on the job's actual sample rate and
+  channel count, so one that cannot encode it is out (`libshine` cannot encode
+  8 kHz); among the survivors the preference order wins unless another one does
+  the same work in under two-thirds of the time. The verdict is cached in the OS
+  cache directory, keyed by ffmpeg build, family and shape, and forgotten if the
+  encoder disappears.
+- **An explicit encoder always wins and is never measured**:
+  `ConvertOptions::encoder`, `--encoder` on `convert`, or the
+  `AUDIO_HELPER_ENCODER` environment variable.
+- `convert::chosen_encoder` returns the decision and its reason (`Explicit`,
+  `Measured`, `Remembered`, `Sole`); the CLI prints it on stderr.
+
+### Changed
+- **Breaking:** `ConvertOptions` has a new public field, `encoder`. Code that
+  builds it field by field must add `encoder: None` or use
+  `..Default::default()`.
+
 ## [0.3.0] — 2026-10-23
 
 A destructive argument order, found by running the binary rather than by reading

@@ -32,6 +32,11 @@ pub fn extract_chunk(input: &Path, start: f64, end: f64, output: &Path) -> Resul
         input.to_string_lossy().into_owned(),
         "-t".into(),
         (end - start).to_string(),
+        // Audio only: a slice of a video into `.m4a` would otherwise carry, and
+        // re-encode, the picture.
+        crate::ffmpeg::AUDIO_ONLY[0].into(),
+        crate::ffmpeg::AUDIO_ONLY[1].into(),
+        crate::ffmpeg::AUDIO_ONLY[2].into(),
         output.to_string_lossy().into_owned(),
     ])?;
 
@@ -85,5 +90,19 @@ mod tests {
 
         let err = extract_chunk(&input, 0.5, 0.2, &output).unwrap_err();
         assert!(matches!(err, AudioHelperError::InvalidTimeRange { .. }));
+    }
+
+    #[test]
+    fn a_chunk_of_a_video_is_audio_only() {
+        require_ffmpeg!();
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("talk.mp4");
+        crate::testutil::write_test_video(&input, 2.0);
+        let output = dir.path().join("slice.m4a");
+        extract_chunk(&input, 0.5, 1.5, &output).unwrap();
+        assert_eq!(
+            crate::testutil::stream_types(&output),
+            vec!["audio".to_string()]
+        );
     }
 }

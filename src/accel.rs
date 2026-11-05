@@ -600,6 +600,48 @@ mod tests {
         assert_eq!(pick_with_margin(&ordered, &[]), Some("aac_at".into()));
     }
 
+    /// `ffmpeg -encoders` from a Linux build with NVENC, VAAPI and QSV (the
+    /// layout of the static GPL builds most Ubuntu + NVIDIA machines run).
+    const LINUX_NVIDIA_ENCODERS: &str = include_str!("testdata/ffmpeg-linux-nvidia-encoders.txt");
+
+    #[test]
+    fn a_gpu_ffmpeg_changes_nothing_for_audio() {
+        // NVENC, VAAPI and QSV encode pictures; NVIDIA ships no audio encoder,
+        // so on an Ubuntu + NVIDIA machine the audio candidates are exactly the
+        // software ones, and no hardware video encoder can ever be chosen.
+        let installed = parse_encoder_list(LINUX_NVIDIA_ENCODERS);
+        for gpu in ["h264_nvenc", "hevc_nvenc", "av1_nvenc", "h264_vaapi"] {
+            assert!(installed.iter().any(|e| e == gpu), "{gpu} not parsed");
+        }
+        let present = |family| -> Vec<&str> {
+            candidates(family)
+                .into_iter()
+                .filter(|c| installed.iter().any(|i| i == c))
+                .collect()
+        };
+        assert_eq!(present(Family::Aac), vec!["aac"]);
+        assert_eq!(present(Family::Mp3), vec!["libmp3lame"]);
+        assert_eq!(present(Family::Opus), vec!["libopus", "opus"]);
+        assert_eq!(present(Family::Flac), vec!["flac"]);
+        assert_eq!(present(Family::Alac), vec!["alac"]);
+        for family in [
+            Family::Aac,
+            Family::Mp3,
+            Family::Alac,
+            Family::Opus,
+            Family::Flac,
+        ] {
+            for c in candidates(family) {
+                assert!(
+                    !["nvenc", "cuvid", "vaapi", "qsv", "videotoolbox"]
+                        .iter()
+                        .any(|hw| c.contains(hw)),
+                    "{c} is a video accelerator, not an audio encoder"
+                );
+            }
+        }
+    }
+
     /// The membership half of [`recall`], without the file read.
     fn recall_from(remembered: &str, present: &[&str]) -> Option<String> {
         present

@@ -4,6 +4,11 @@ use crate::error::{AudioHelperError, Result};
 use std::ffi::OsStr;
 use std::process::Command;
 
+/// Output options that keep the audio and drop everything else: video,
+/// subtitles, data. A no-op on an audio-only input; on a video input it is the
+/// difference between extracting a track and re-encoding a film.
+pub(crate) const AUDIO_ONLY: [&str; 3] = ["-vn", "-sn", "-dn"];
+
 /// Runs `ffmpeg -y -hide_banner -loglevel error <args>`, returning `Err` with
 /// ffmpeg's stderr on a non-zero exit.
 pub(crate) fn run<I, S>(args: I) -> Result<()>

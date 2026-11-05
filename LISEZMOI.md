@@ -12,10 +12,10 @@ Réécriture en Rust de [`audio-helper`](https://github.com/warith-harchaoui/aud
 |---|---|
 | `is_valid_audio_file(path) -> bool` | Vérification via `ffprobe` : le fichier contient-il au moins un flux audio ? |
 | `get_audio_duration(path) -> Result<f64>` | Durée en secondes, via `ffprobe`. |
-| `convert(input, output, &ConvertOptions) -> Result<()>` | Réencode à une fréquence d'échantillonnage / un nombre de canaux / un codec donnés. `overwrite: false` saute le travail si une sortie valide existe déjà. |
+| `convert(input, output, &ConvertOptions) -> Result<()>` | Réencode à une fréquence d'échantillonnage / un nombre de canaux / un codec donnés. `overwrite: false` saute le travail si une sortie valide existe déjà. La sortie ne porte que l'audio : l'image d'une vidéo, ses sous-titres et ses pistes de données sont écartés, pas réencodés. |
 | `load(path, &LoadOptions) -> Result<PcmBuffer>` | Décode en mémoire en PCM `f32` (`Vec<f32>` + fréquence + canaux) — mono par défaut, rééchantillonnage optionnel. Fonctionne sur toute entrée lisible par `ffmpeg`, y compris la piste audio d'un conteneur vidéo. |
 | `save(&PcmBuffer, path) -> Result<()>` | Réécrit du PCM dans un fichier, l'inverse de `load`. Un `.wav` est écrit directement (sans `ffmpeg`) ; toute autre extension passe par `convert`, donc le codec suit l'extension. Les échantillons hors de `-1.0..=1.0` sont écrêtés, pas repliés. |
-| `extract_chunk(input, start, end, output) -> Result<()>` | Extrait une tranche `[start, end)` (secondes). |
+| `extract_chunk(input, start, end, output) -> Result<()>` | Extrait une tranche `[start, end)` (secondes), audio seul. |
 | `generate_silence(duration, output, sample_rate) -> Result<()>` | Écrit un fichier silencieux d'une durée donnée ; vérifie ensuite que le résultat est réellement silencieux. |
 | `concatenate(inputs, output) -> Result<()>` | Concatène des fichiers bout à bout via le filtre `concat` de `ffmpeg` (fonctionne même avec des codecs différents, contrairement au démuxeur `concat`). |
 | `mix_room_tone(input, output, &RoomToneOptions) -> Result<()>` | Mélange un bruit de fond coloré à faible niveau sous une piste de parole — astuce classique de post-production pour que les silences d'un montage ne sonnent pas artificiellement morts. |
@@ -119,6 +119,22 @@ La fonctionnalité `cli`, active par défaut, construit le binaire `audio-helper
 audio-helper-rs = { version = "0.4", default-features = false }
 ```
 
+### Ubuntu + NVIDIA
+
+Rien à installer de plus qu'un `ffmpeg` et un `ffprobe` sur le `PATH` : celui d'Ubuntu (`apt
+install ffmpeg`) comme une construction statique GPL conviennent. Un ffmpeg compilé pour le GPU ne
+change rien ici, et c'est vérifié plutôt que supposé : NVENC, NVDEC/`*_cuvid`, VAAPI et QSV codent
+ou décodent des **images**, NVIDIA ne livre aucun codec audio, et cette caisse ne décode jamais un
+flux vidéo. `accel` ne propose que des encodeurs audio (sous Linux, ceux de ffmpeg : `aac`,
+`libmp3lame`, `libopus`, `flac`, `alac`), ce qu'un test fige contre la sortie de `ffmpeg
+-encoders` d'une construction Linux dotée de NVENC, VAAPI et QSV
+(`src/testdata/ffmpeg-linux-nvidia-encoders.txt`). Pour voir ce que propose le ffmpeg d'une
+machine :
+
+```sh
+ffmpeg -hide_banner -encoders | grep -E ' (aac|libfdk_aac|libmp3lame|libopus|flac|alac) '
+```
+
 ## Ligne de commande
 
 `cargo install audio-helper-rs` installe aussi un binaire `audio-helper-rs` — nommé d'après la
@@ -154,7 +170,7 @@ vers une référence qui n'existe plus.
 ## État du projet
 
 - `cargo build` : OK, aucun avertissement.
-- `cargo test` : **40 tests unitaires + 6 tests du catalogue de la skill + 1 doctest passés**, 0 échec — chaque test qui en a besoin lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé. Sans `ffmpeg` installé, ces tests sont sautés avec un message explicite au lieu d'échouer ; en CI (`$CI` défini) ils échouent bruyamment, car là un `ffmpeg` absent signifie que le workflow est cassé.
+- `cargo test` : **43 tests unitaires + 6 tests du catalogue de la skill + 1 doctest passés**, 0 échec — chaque test qui en a besoin lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé. Sans `ffmpeg` installé, ces tests sont sautés avec un message explicite au lieu d'échouer ; en CI (`$CI` défini) ils échouent bruyamment, car là un `ffmpeg` absent signifie que le workflow est cassé.
 - `cargo clippy --all-targets` : OK, aucun avertissement.
 - **Couverture de code mesurée** (`cargo llvm-cov`, remesurée le 2026-10-02 pour la 0.2.0) : **91,19 % de lignes couvertes** (795 lignes, 70 non couvertes), 87,06 % de fonctions, 91,41 % de régions. Détail par fichier :
 

@@ -80,6 +80,11 @@ pub fn convert(input: &Path, output: &Path, options: &ConvertOptions) -> Result<
         .unwrap_or(false);
 
     let mut args: Vec<std::ffi::OsString> = vec!["-i".into(), input.into()];
+    // Audio only. `.m4a` and `.mp4` can carry video, so a screen recording or a
+    // talk would otherwise come out with its picture re-encoded (libx264, or
+    // whatever the build defaults to) — a video encode nobody asked for, and an
+    // "audio" file that is not one. Subtitles and data tracks likewise.
+    args.extend(crate::ffmpeg::AUDIO_ONLY.iter().map(Into::into));
     args.push("-ar".into());
     args.push(options.sample_rate.to_string().into());
     args.push("-ac".into());
@@ -163,5 +168,26 @@ mod tests {
         let output = dir.path().join("out.wav");
         let err = convert(&input, &output, &ConvertOptions::default()).unwrap_err();
         assert!(matches!(err, AudioHelperError::FileNotFound(_)));
+    }
+
+    #[test]
+    fn a_video_input_gives_an_audio_only_output() {
+        // `.m4a` and `.mp4` can carry video, so without `-vn` ffmpeg maps the
+        // picture too and re-encodes it (libx264 when the build has it): an
+        // "audio" file with a video track, and a video encode nobody asked for.
+        require_ffmpeg!();
+        let dir = tempfile::tempdir().unwrap();
+        let input = dir.path().join("talk.mp4");
+        crate::testutil::write_test_video(&input, 1.0);
+        assert!(crate::testutil::stream_types(&input).contains(&"video".to_string()));
+        for ext in ["m4a", "mp4", "mp3", "wav"] {
+            let output = dir.path().join(format!("talk-audio.{ext}"));
+            convert(&input, &output, &ConvertOptions::default()).unwrap();
+            assert_eq!(
+                crate::testutil::stream_types(&output),
+                vec!["audio".to_string()],
+                ".{ext} kept something other than the audio"
+            );
+        }
     }
 }

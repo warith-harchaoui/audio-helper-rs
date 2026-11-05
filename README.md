@@ -12,10 +12,10 @@ Rust rewrite of [`audio-helper`](https://github.com/warith-harchaoui/audio-helpe
 |---|---|
 | `is_valid_audio_file(path) -> bool` | `ffprobe`-based check: does the file contain at least one audio stream? |
 | `get_audio_duration(path) -> Result<f64>` | Duration in seconds, via `ffprobe`. |
-| `convert(input, output, &ConvertOptions) -> Result<()>` | Re-encode at a given sample rate / channel count / codec. `overwrite: false` skips the work if a valid output already exists. |
+| `convert(input, output, &ConvertOptions) -> Result<()>` | Re-encode at a given sample rate / channel count / codec. `overwrite: false` skips the work if a valid output already exists. The output carries the audio only: a video input's picture, subtitles and data tracks are dropped, not re-encoded. |
 | `load(path, &LoadOptions) -> Result<PcmBuffer>` | Decode into memory as `f32` PCM (`Vec<f32>` + sample rate + channels) — mono by default, optional resampling. Works on any `ffmpeg`-readable input, including the audio track of a video container. |
 | `save(&PcmBuffer, path) -> Result<()>` | Write PCM back to a file, the inverse of `load`. A `.wav` is written directly (no `ffmpeg` needed); any other extension goes through `convert`, so the codec follows the extension. Samples beyond `-1.0..=1.0` are clamped, not wrapped. |
-| `extract_chunk(input, start, end, output) -> Result<()>` | Cut a `[start, end)` slice (seconds). |
+| `extract_chunk(input, start, end, output) -> Result<()>` | Cut a `[start, end)` slice (seconds), audio only. |
 | `generate_silence(duration, output, sample_rate) -> Result<()>` | Write a silent file of a given duration; self-checks that the result really is silent. |
 | `concatenate(inputs, output) -> Result<()>` | Join files head-to-tail via `ffmpeg`'s `concat` filter (works across mismatched codecs, unlike the `concat` demuxer). |
 | `mix_room_tone(input, output, &RoomToneOptions) -> Result<()>` | Mix a constant low-level colored-noise bed under a speech track — standard post-production trick so edited-together silent gaps don't sound unnaturally dead. |
@@ -118,6 +118,20 @@ consumer that never calls the binary can leave both out:
 audio-helper-rs = { version = "0.4", default-features = false }
 ```
 
+### Ubuntu + NVIDIA
+
+Nothing to install beyond an `ffmpeg` and an `ffprobe` on `PATH`; Ubuntu's own (`apt install
+ffmpeg`) or a static GPL build both work. A GPU build of ffmpeg changes nothing here, and that is
+checked rather than assumed: NVENC, NVDEC/`*_cuvid`, VAAPI and QSV encode or decode **pictures**,
+NVIDIA ships no audio codec, and this crate never decodes a video stream. `accel` only ever offers
+audio encoders (on Linux, ffmpeg's own: `aac`, `libmp3lame`, `libopus`, `flac`, `alac`), which a
+test pins against the `ffmpeg -encoders` listing of a Linux build with NVENC, VAAPI and QSV
+(`src/testdata/ffmpeg-linux-nvidia-encoders.txt`). To see what a machine's ffmpeg offers:
+
+```sh
+ffmpeg -hide_banner -encoders | grep -E ' (aac|libfdk_aac|libmp3lame|libopus|flac|alac) '
+```
+
 ## Command line
 
 `cargo install audio-helper-rs` also installs a `audio-helper-rs` binary — named after the
@@ -150,7 +164,7 @@ points at a reference that no longer exists.
 ## Project status
 
 - `cargo build`: clean, no warnings.
-- `cargo test`: **40 unit tests + 6 skill-catalogue tests + 1 doctest passing**, 0 failures — every test that needs one runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked. Without `ffmpeg` installed those tests skip with a printed reason instead of failing; under CI (`$CI` set) they fail loudly, because there a missing `ffmpeg` means the workflow is broken.
+- `cargo test`: **43 unit tests + 6 skill-catalogue tests + 1 doctest passing**, 0 failures — every test that needs one runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked. Without `ffmpeg` installed those tests skip with a printed reason instead of failing; under CI (`$CI` set) they fail loudly, because there a missing `ffmpeg` means the workflow is broken.
 - `cargo clippy --all-targets`: clean, no warnings.
 - **Measured code coverage** (`cargo llvm-cov`, re-measured 2026-10-02 for 0.2.0): **91.19% line coverage** (795 lines, 70 uncovered), 87.06% function coverage, 91.41% region coverage. Per-file breakdown:
 

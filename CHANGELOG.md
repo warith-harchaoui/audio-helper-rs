@@ -4,6 +4,20 @@ All notable changes to `audio-helper-rs` are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/), and the project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] — 2026-11-05
+
+### Fixed
+- **`convert` and `extract_chunk` keep the audio only** (`-vn -sn -dn`). A video
+  input converted to `.m4a` or `.mp4`, or sliced into one, used to come out
+  with its picture re-encoded (libx264 where the build has it): an "audio"
+  file with a video track, and a video encode nobody asked for. The Python twin
+  never had the problem, because it goes through an intermediate WAV.
+
+### Added
+- A test pins `accel` against the `ffmpeg -encoders` listing of a Linux build
+  with NVENC, VAAPI and QSV: the audio candidates stay the software ones and no
+  video accelerator is ever offered. The README says so under "Ubuntu + NVIDIA".
+
 ## [0.4.0] — 2026-11-04
 
 The encoder of a compressed output is now chosen for this machine, by trial,

@@ -1,0 +1,39 @@
+Encoders:
+ V..... = Video
+ A..... = Audio
+ S..... = Subtitle
+ .F.... = Frame-level multithreading
+ ..S... = Slice-level multithreading
+ ...X.. = Codec is experimental
+ ....B. = Supports draw_horiz_band
+ .....D = Supports direct rendering method 1
+ ------
+ V....D a64multi             Multicolor charset for Commodore 64 (codec a64_multi)
+ V....D libx264              libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (codec h264)
+ V....D libx264rgb           libx264 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 RGB (codec h264)
+ V....D h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)
+ V....D h264_qsv             H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (Intel Quick Sync Video acceleration) (codec h264)
+ V....D h264_vaapi           H.264/AVC (VAAPI) (codec h264)
+ V....D h264_vulkan          H.264/AVC (Vulkan) (codec h264)
+ V....D libx265              libx265 H.265 / HEVC (codec hevc)
+ V....D hevc_nvenc           NVIDIA NVENC hevc encoder (codec hevc)
+ V....D hevc_qsv             HEVC (Intel Quick Sync Video acceleration) (codec hevc)
+ V....D hevc_vaapi           H.265/HEVC (VAAPI) (codec hevc)
+ V....D libsvtav1            SVT-AV1(Scalable Video Technology for AV1) encoder (codec av1)
+ V....D av1_nvenc            NVIDIA NVENC av1 encoder (codec av1)
+ V....D av1_qsv              AV1 (Intel Quick Sync Video acceleration) (codec av1)
+ V....D av1_vaapi            AV1 (VAAPI) (codec av1)
+ V....D mpeg4                MPEG-4 part 2
+ V....D libvpx-vp9           libvpx VP9 (codec vp9)
+ A....D aac                  AAC (Advanced Audio Coding)
+ A....D ac3                  ATSC A/52A (AC-3)
+ A....D alac                 ALAC (Apple Lossless Audio Codec)
+ A....D flac                 FLAC (Free Lossless Audio Codec)
+ A....D libmp3lame           libmp3lame MP3 (MPEG audio layer 3) (codec mp3)
+ A....D libopus              libopus Opus (codec opus)
+ A..X.D opus                 Opus
+ A....D libvorbis            libvorbis (codec vorbis)
+ A....D pcm_s16le            PCM signed 16-bit little-endian
+ A....D pcm_f32le            PCM 32-bit floating point little-endian
+ S..... ass                  ASS (Advanced SubStation Alpha) subtitle
+ S..... srt                  SubRip subtitle

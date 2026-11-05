@@ -53,7 +53,7 @@ let pcm = load(Path::new("in.mp3"), &LoadOptions {
 
 For a compressed output `convert` picks the encoder this machine runs best
 (AudioToolbox on a Mac, Media Foundation on Windows, ffmpeg's own elsewhere),
-by trial and timing, cached per ffmpeg build. Name one with
+by trial and timing, cached per ffmpeg build and job shape. Name one with
 `ConvertOptions { encoder: Some("libmp3lame".into()), .. }`, `--encoder`, or
 `AUDIO_HELPER_ENCODER`; `convert::chosen_encoder` reports the decision.
 

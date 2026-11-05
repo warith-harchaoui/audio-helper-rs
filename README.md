@@ -54,8 +54,9 @@ own codec layer is real and is backed by dedicated silicon on recent machines:
 
 So `convert` no longer lets ffmpeg fall back to its portable default. It asks this machine
 which installed encoder is fastest, by **timing them** on ten seconds of signal, and remembers
-the verdict in the OS cache directory, keyed by the ffmpeg build — so the question is asked
-once per machine, not once per call.
+the verdict in the OS cache directory, keyed by the ffmpeg build, the codec family, the sample
+rate and the channel count — so the trials run once per machine and per shape of job, not once
+per call.
 
 It is measured rather than reasoned because reasoning about accelerators is unreliable: the
 sibling crate `vocal-helper-rs` put the obvious accelerator first and made its workload twice
@@ -110,6 +111,13 @@ Requires `ffmpeg` and `ffprobe` on `PATH` (macOS: `brew install ffmpeg`), and Ru
 audio-helper-rs = "0.4"
 ```
 
+The default `cli` feature builds the `audio-helper-rs` binary and pulls in `clap`. A library
+consumer that never calls the binary can leave both out:
+
+```toml
+audio-helper-rs = { version = "0.4", default-features = false }
+```
+
 ## Command line
 
 `cargo install audio-helper-rs` also installs a `audio-helper-rs` binary — named after the
@@ -142,7 +150,7 @@ points at a reference that no longer exists.
 ## Project status
 
 - `cargo build`: clean, no warnings.
-- `cargo test`: **26 unit tests + 1 doctest passing**, 0 failures — every test that needs one runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked. Without `ffmpeg` installed those tests skip with a printed reason instead of failing; under CI (`$CI` set) they fail loudly, because there a missing `ffmpeg` means the workflow is broken.
+- `cargo test`: **40 unit tests + 6 skill-catalogue tests + 1 doctest passing**, 0 failures — every test that needs one runs a real `ffmpeg`/`ffprobe` subprocess against a `hound`-generated WAV fixture, nothing mocked. Without `ffmpeg` installed those tests skip with a printed reason instead of failing; under CI (`$CI` set) they fail loudly, because there a missing `ffmpeg` means the workflow is broken.
 - `cargo clippy --all-targets`: clean, no warnings.
 - **Measured code coverage** (`cargo llvm-cov`, re-measured 2026-10-02 for 0.2.0): **91.19% line coverage** (795 lines, 70 uncovered), 87.06% function coverage, 91.41% region coverage. Per-file breakdown:
 

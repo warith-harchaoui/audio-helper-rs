@@ -39,12 +39,12 @@ println!("{} secondes", get_audio_duration(&path)?);
 
 ![Comment audio-helper-rs fonctionne : un fichier audio en entrée, ffmpeg piloté depuis un Rust typé, des fichiers et du PCM en sortie](https://raw.githubusercontent.com/warith-harchaoui/audio-helper-rs/main/assets/diagrams/comment-ca-marche.png)
 
-## Quel encodeur, et qui l'a décidé
+## Quel encodeur, qui l'a décidé
 
-Une sortie compressée doit bien être encodée par *quelque chose*, et ce quelque chose dépend de
+Une sortie compressée doit bien être encodée par *quelque chose* ; ce quelque chose dépend de
 la machine. Il n'y a pas de chemin GPU qui vaille la peine pour de l'audio — un GPU décode de la
-vidéo, et un flux audio est bien trop petit pour payer le voyage sur le bus — mais la couche
-codec du système, elle, existe, et elle s'appuie sur du silicium dédié sur les machines
+vidéo ; un flux audio est bien trop petit pour payer le voyage sur le bus — mais la couche
+codec du système, elle, existe : elle s'appuie sur du silicium dédié sur les machines
 récentes :
 
 | plateforme | ce qu'elle offre | nom chez ffmpeg |
@@ -55,8 +55,9 @@ récentes :
 
 Donc `convert` ne laisse plus ffmpeg retomber sur son encodeur portable par défaut. Il demande à
 cette machine lequel des encodeurs installés est le plus rapide, en les **chronométrant** sur
-dix secondes de signal, et retient le verdict dans le dossier de cache du système, attaché à la
-version de ffmpeg — la question est donc posée une fois par machine, pas une fois par appel.
+dix secondes de signal. Il retient le verdict dans le dossier de cache du système, attaché à la
+version de ffmpeg, à la famille de codec, à la fréquence et au nombre de canaux — les essais ont
+donc lieu une fois par machine et par forme de travail, pas une fois par appel.
 
 C'est mesuré plutôt que raisonné parce que le raisonnement sur les accélérateurs n'est pas
 fiable : la caisse voisine `vocal-helper-rs` a mis l'accélérateur évident en tête et a rendu son
@@ -71,21 +72,21 @@ relief*. Sur cette machine Apple Silicon, sur 600 s d'audio et trois essais chac
 Les plages se recouvrent : **l'encodeur de la plateforme n'est pas plus rapide ici de façon
 significative**, quoi qu'on ait pu supposer.
 
-Ce qui fixe l'ordre des règles, et la première a été apprise à la dure. Classés sur la seule
+Ce qui fixe l'ordre des règles ; la première a été apprise à la dure. Classés sur la seule
 vitesse, la CI l'a attrapé dès le premier passage : sur Linux, `libshine` encode le MP3 plus
 vite que `libmp3lame` et **ne sait pas encoder à 8 kHz du tout**, puisqu'il ne gère que trois
 fréquences. Un encodeur qui ne sait pas encoder votre audio n'est pas un encodeur rapide : ce
 n'est pas un candidat. Chaque candidat est donc mis à l'essai sur la fréquence et le nombre de
-canaux *réels*, et celui qui échoue sort — sans avoir à tenir une table des caprices de chacun.
+canaux *réels* ; celui qui échoue sort, sans avoir à tenir une table des caprices de chacun.
 
-Parmi les survivants, c'est l'ordre de préférence qui gagne, parce qu'il est classé par qualité
-et par plateforme, et qu'échanger de la qualité audible contre quelques millisecondes serait un
-mauvais marché. Seule une victoire *nette* — le même travail en moins des deux tiers du temps —
+Parmi les survivants, c'est l'ordre de préférence qui gagne : il est classé par qualité et par
+plateforme ; échanger de la qualité audible contre quelques millisecondes serait un mauvais
+marché. Seule une victoire *nette* — le même travail en moins des deux tiers du temps —
 le renverse. Cette clause est ce qui empêche un accélérateur d'être pathologique, ce dont
 `vocal-helper-rs` a souffert ; une petite marge, elle, aurait échangé la qualité contre du bruit
-de mesure, et mis le tirage au sort en cache.
+de mesure avant de mettre le tirage au sort en cache.
 
-**Un choix explicite gagne toujours, et n'est ni mesuré ni rediscuté :**
+**Un choix explicite gagne toujours ; il n'est ni mesuré ni rediscuté :**
 
 ```sh
 audio-helper-rs convert in.wav out.m4a --encoder aac_at   # celui-là, parce que je le dis
@@ -109,6 +110,13 @@ Nécessite `ffmpeg` et `ffprobe` sur le `PATH` (macOS : `brew install ffmpeg`) a
 ```toml
 [dependencies]
 audio-helper-rs = "0.4"
+```
+
+La fonctionnalité `cli`, active par défaut, construit le binaire `audio-helper-rs` et tire
+`clap`. Une bibliothèque qui n'appelle jamais le binaire peut se passer des deux :
+
+```toml
+audio-helper-rs = { version = "0.4", default-features = false }
 ```
 
 ## Ligne de commande
@@ -137,7 +145,7 @@ l'utilisateur. L'installation pour les deux hôtes est dans
 
 Son catalogue de déclencheurs est imposé, pas décoratif :
 [`TRIGGERS.md`](TRIGGERS.md) est le catalogue destiné aux humains,
-`references/triggers.md` en est le miroir destiné à l'agent, et
+`references/triggers.md` en est le miroir destiné à l'agent ;
 `tests/skill.rs` fait échouer `cargo test` — donc le hook de pré-push — si les
 deux divergent, si la `description` du skill dépasse le plafond publié de 1024
 caractères, si son `name` cesse de correspondre à son dossier ou s'il pointe
@@ -146,7 +154,7 @@ vers une référence qui n'existe plus.
 ## État du projet
 
 - `cargo build` : OK, aucun avertissement.
-- `cargo test` : **26 tests unitaires + 1 doctest passés**, 0 échec — chaque test qui en a besoin lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé. Sans `ffmpeg` installé, ces tests sont sautés avec un message explicite au lieu d'échouer ; en CI (`$CI` défini) ils échouent bruyamment, car là un `ffmpeg` absent signifie que le workflow est cassé.
+- `cargo test` : **40 tests unitaires + 6 tests du catalogue de la skill + 1 doctest passés**, 0 échec — chaque test qui en a besoin lance un vrai sous-processus `ffmpeg`/`ffprobe` sur un fixture WAV généré via `hound`, rien n'est simulé. Sans `ffmpeg` installé, ces tests sont sautés avec un message explicite au lieu d'échouer ; en CI (`$CI` défini) ils échouent bruyamment, car là un `ffmpeg` absent signifie que le workflow est cassé.
 - `cargo clippy --all-targets` : OK, aucun avertissement.
 - **Couverture de code mesurée** (`cargo llvm-cov`, remesurée le 2026-10-02 pour la 0.2.0) : **91,19 % de lignes couvertes** (795 lignes, 70 non couvertes), 87,06 % de fonctions, 91,41 % de régions. Détail par fichier :
 
@@ -183,7 +191,7 @@ cargo test --all
 scripts/check-fresh-resolve.sh   # compile sans Cargo.lock, comme un consommateur en aval
 ```
 
-Le dernier existe parce que les trois autres et la CI, compilent tous contre le
+Le dernier existe parce que les trois autres, comme la CI, compilent tous contre le
 `Cargo.lock` commité — que personne n'utilise en aval du crate publié. Un intervalle de
 dépendance devenu mauvais reste vert ici tout en cassant chaque `cargo add` / `cargo
 install` neuf et `cargo publish --dry-run` ne le voit pas non plus (il vérifie avec le
